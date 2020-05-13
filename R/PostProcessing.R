@@ -1,0 +1,403 @@
+## Data generation for additional visualization of the output
+## Copyright (C) 2018-2020 AHM Mahfuzur Rahman (rahma118@umn.edu)
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+#' Separate the contribution of signal into individual entries (a complex, pathway, GO Biological Process etc.)
+#' Works on the result of CalculatePredictionAndTrueOnLibraryProfiles
+#'
+#' @param info.pairs -> True, Predicted values with pair association to an entity
+#' @param top.numbers -> How much of the signal to consider (from the top)
+#' @param data.entity -> Entity ID and Name information
+#'
+#' @return The entities and their contribution to the signal
+#' 
+#' @export
+#' 
+GetContributionOfEntities <- function (info.pairs, top.number, data.entity){
+
+  # Sort by predicted scores
+  sort.ind = order(info.pairs[,'predicted'], decreasing = TRUE)
+  info.pairs = info.pairs[sort.ind,]
+
+  # Now find the top TP Pairs from the data
+  count.tp.pairs = cumsum(info.pairs[,'true'])
+  min.ind = min(which (count.tp.pairs == top.number))
+
+  tmp.data = info.pairs[1:min.ind, ] # Get the data until the point where we get top.number of TP
+  tmp.data = tmp.data[tmp.data[,'true'] == 1, ] # Keep only the TP Pairs (with true = 1)
+
+  # Split the source by ';' and get the IDs in lists
+  tmp.names = strsplit(tmp.data[,'source'], ';')
+  all.IDs = as.integer(unlist(tmp.names))
+  unique.IDs = unique(all.IDs)
+  count.IDs = tabulate(match(all.IDs,  unique.IDs)) # May need to change if data size is big (Not efficient)
+  contribution.entities = data.frame(ID = unique.IDs, count = count.IDs, Name = data.entity[as.character(unique.IDs),2])
+
+  # Sort by contribution count
+  ind = order(contribution.entities[,"count"], decreasing = TRUE);
+  contribution.entities = contribution.entities[ind,];
+  
+  return(contribution.entities)
+}
+
+
+
+#' Separate the contribution of signal into individual entries (a complex, pathway, GO Biological Process etc.)
+#'
+#' @param summary.standard -> Identity of each entity ('ID'), 'Name', Genes insdie ('Gene'), 'Length'
+#' @param data.standard -> Original Co-annotation data for each entity
+#' @param entity.matrix -> Output of CalculatePredictionAndTrueOnLibraryProfiles (true, predicted, source, indices)
+#'
+#' @return Area under the curve for each unique entity (protein complex for example)
+#' 
+#' @export
+#'   
+GetAreaUnderPRCurveForEntities <- function (summary.standard, data.standard, entity.matrix){
+  
+  ## *** Check input data format
+  true_classes_count <- (class(summary.standard) == 'data.frame') + (class(data.standard) == 'data.frame') + (class(entity.matrix) == 'data.frame')
+  if(true_classes_count < 3){
+    stop ("Check the inputs again ... they are supposed to be data.frame's")
+    # stopifnot(true_classes_count < 3)
+    # print ("Check the inputs again ... they are supposed to be data.frame's")
+    # return (NULL)
+  }
+  
+  # Find the unique Entities that are represented
+  tmp.ID <- entity.matrix$ID[entity.matrix$true == 1]
+  tmp.names = strsplit(tmp.ID, ';')
+  unique.complex.ID = sort(unique(as.integer(unlist(tmp.names))))
+  
+  if (is.unsorted(data.standard$gene1)){
+    ind <- order(data.standard$gene1)
+    data.standard <- data.standard[ind,]
+  }
+  
+  data.input = data.standard[entity.matrix$index, ] # Part of the standard that is relevant here (we want to matchup everything with this)
+  
+  # Group by gene1
+  ind_1 <- sort(data.input$gene1, index.return = TRUE)
+  data_tmp_1 <- data.input[ind_1$ix,];
+  indices_1 <- GroupUniqueElements(data_tmp_1$gene1)
+  genes_1 <- row.names(indices_1)
+  
+  # Group by gene2
+  ind_2 <- sort(data.input$gene2, index.return = TRUE)
+  data_tmp_2 <- data.input[ind_2$ix,];
+  indices_2 <- GroupUniqueElements(data_tmp_2$gene2)
+  genes_2 <- row.names(indices_2)
+  
+  # Pre-processing
+  AUC.values = numeric(length(unique.complex.ID))
+  common.complex.ID <- intersect(unique.complex.ID, summary.standard$ID)
+  matched.ind <- match(common.complex.ID, summary.standard$ID, nomatch = 0) # identical(summary.standard$ID[matched.ind], common.complex.ID)
+  
+  curr.ind <- 1
+  
+  # require(stringi) # don't need it anymore it seems?!
+  # https://rdrr.io/rforge/stringi/
+  # sum(stri_detect(data_subset$source, fixed = to.match))
+  # data_subset$source[stri_detect(data_subset$source, fixed = to.match)]
+  
+  # print('Functional Diversity ...')
+  pb <- txtProgressBar(style = 3) # Progress bar
+  for (i in matched.ind){
+    # print(i)
+    gene_list = unlist(strsplit(toupper(summary.standard$Genes[i]), ';'))
+    gene_list = gsub(' ', '', gene_list) # Replacing any spaces with nothing
+    
+    interested.indices <- c()
+    
+    # Look for genes on the first row
+    tmp <- intersect(genes_1, gene_list)
+    for (j in 1 : length(tmp) ){
+      interested.indices <- append(interested.indices, indices_1[tmp[j],1] : indices_1[tmp[j],2])
+    }
+    interested.indices <- ind_1$ix[interested.indices] # data.standard is already sorted by gene1 so it may not be necessary
+    # unique(data_tmp_1[interested.indices,]$gene1)
+    # unique(data_input[ind_1$ix[interested.indices],]$gene1)
+    
+    # Look for genes on the second row
+    tmp <- intersect(genes_2, gene_list)
+    interested.indices_tmp <- c()
+    for (j in 1 : length(tmp) ){
+      interested.indices_tmp <- append(interested.indices_tmp, indices_2[tmp[j],1] : indices_2[tmp[j],2])
+    }
+    # unique(data_tmp_2[interested.indices_tmp,]$gene2)
+    # unique(data_input[ind_2$ix[interested.indices_tmp],]$gene2)
+    
+    interested.indices <- append(interested.indices, ind_2$ix[interested.indices_tmp])
+    interested.indices <- unique(interested.indices) # data.standard[interested.indices,]
+    
+    ## Need to find only the positives that come from this complex (not this gene, as it can connect to other genes not part of the complex).
+    # For negatives, it's fine.
+    data_subset = entity.matrix[interested.indices,]   
+    to.match = as.character(summary.standard$ID[i])
+    
+    # Now find the negative and positve part of the standard
+    # neg.ind <- stri_isempty(data_subset$ID) 
+    # identical(neg.ind, neg.ind.1) is TRUE!!! No need for 'stringi' package
+    
+    # All negatives are with ID = ''
+    # "^\\s*$" asks for 0 or more (*) spaces (\\s) between beginning (^) and end ($) of string
+    neg.ind <- grepl("^\\s*$", data_subset$ID)
+    data.neg <- data_subset[neg.ind,]
+    
+    # Remove the pairs (ID) that don't contain the complex ID
+    data.pos <- data_subset[!neg.ind, ]
+    real.pos.ind <- sapply(sapply(strsplit(data.pos$ID, ';'), is.element, to.match), sum) == 1
+    data.pos <- data.pos[real.pos.ind,]
+    
+    data_relevant <- rbind(data.neg, data.pos)
+    # write.table(data_relevant[,c('true', 'predicted')], 'test_case_Prefoldin_33.txt', row.names = FALSE, sep = '\t')
+    
+    Perf.result = GenerateDataForPerfCurve(data_relevant$predicted, data_relevant$true, x.axis = 'recall', y.axis = 'precision')
+    
+    AUC.values[curr.ind] = Perf.result$auc # Should be either zero or positive (check)
+    setTxtProgressBar(pb, curr.ind/length(matched.ind)) # Progress bar update
+    
+    curr.ind <- curr.ind + 1
+  }
+  
+  close(pb)
+  
+  # sort the data by their AUPRC values (highest to lowest)
+  data.out <- data.frame(ID = summary.standard[matched.ind,]$ID, Name = summary.standard[matched.ind,]$Name, Length = summary.standard[matched.ind,]$Length, AUPRC = round(AUC.values,3), stringsAsFactors = FALSE)
+  ind <- order (data.out$AUPRC, decreasing = TRUE) # why is ind$ix not giving the same data of ind$x!!
+  data.out <- data.out[ind,]
+  
+  return (data.out)
+}
+
+
+
+#' Separate the contribution of signal into individual entries (a complex, pathway, GO Biological Process etc.)
+#'
+#' @param Pairs.in.data Identity of each entity ('ID'), 'Name', Genes insdie ('Gene'), 'Length'
+#' @param cutoff.all Precision cutoffs the user is interested in.
+#' @param summary.standard Summary of the standard used: includes ID, Name, Genes, and Length
+#'
+#' @return output.stepwise.contribution -> Stepwise contribution matrix
+#' This is a entity ID * cutoff data.frame (with an extra column added for entity Name)
+#' @export
+#'  
+GetStepwiseContributionOfEntities <- function (Pairs.in.data, cutoff.all, summary.standard){
+  
+  ## *** Check input data format
+  if((class(Pairs.in.data) != 'data.frame') & (class(summary.standard) != 'data.frame')){
+    stop ("Check the input again ... it's supposed to be data.frame")
+  }
+  
+  # Sort the data by score (prediction)
+  ind <- order(Pairs.in.data$predicted, decreasing = TRUE)
+  Pairs.in.data <- Pairs.in.data[ind,]
+  
+  # Just a little different as in matlab the first values are 0 (TP or PR.values$x) and Nan (Precision or PR.values$y)
+  PR.values <- GenerateDataForPerfCurve(value.predicted = Pairs.in.data$predicted, value.true = Pairs.in.data$true, x.axis = 'TP', y.axis = 'precision')
+  TP = PR.values$x
+  Precision = PR.values$y
+  TP.count = cumsum(Pairs.in.data$true)
+  
+  ## Let's make a matrix for all IDs (associated with co-annotation) and cutoffs
+  # cutoff.all <- c(0.0059, seq(0.1, 1, 0.025)) # Looks good
+  Pos.Pairs.in.data <- Pairs.in.data[Pairs.in.data$true == 1,]
+  unique.IDs <- unique(unlist(strsplit(paste(Pos.Pairs.in.data$ID, collapse = ';'), split = ';')))
+  
+  ID.cutoff.matrix <- matrix(0, nrow = length(unique.IDs), ncol = length(cutoff.all)) # Initial TP contribution matrix
+  rownames(ID.cutoff.matrix) <- as.numeric(unique.IDs) # unique.IDs
+  
+  final.contribution.matrix <- matrix(0, nrow = length(unique.IDs), ncol = length(cutoff.all)) # Stepwise TP contribution matrix
+  rownames(final.contribution.matrix) <- unique.IDs
+  
+  for (i in seq(1, length(cutoff.all), 1)) {
+  # for (i in seq(1, 5, 1)) {
+    # i = 20
+    # print(paste('cutoff: ', cutoff.all[i], sep = ': '))
+    
+    cutoff = cutoff.all[i]
+    cand.ind <- which(Precision >= cutoff)
+    tmp.ind <- which(TP.count == TP[cand.ind[length(cand.ind)]]) # Looks good
+    
+    # Get the TP pairs and their association (to complex IDs)
+    tmp.pairs <- Pairs.in.data[1 : tmp.ind[1], ]
+    tmp.pairs <- tmp.pairs[tmp.pairs$true == 1, ] # Only keep the TPs
+    
+    ## Find contribution of pairs for each entity (ID)
+    for (j in seq(1, dim(tmp.pairs)[1], 1) ) {
+      
+      # each ID has value (as we are only keeping TPs)
+      tmp.names <- unlist(strsplit(tmp.pairs$ID[j], ';'))
+      
+      # for each individual ID in the ID column
+      for (k in tmp.names){
+        ID.cutoff.matrix[k,i] <- ID.cutoff.matrix[k,i] + 1 # Initialized with 0
+      }
+    }
+    
+    ## Find the maximum contribution at this cutoff and update the final.contribution.matrix
+    max.ind <- which(ID.cutoff.matrix[,i] == max(ID.cutoff.matrix[,i], na.rm = TRUE))
+    curr.id <- names(max.ind[1])
+    final.contribution.matrix[curr.id,i] <- ID.cutoff.matrix[curr.id,i]
+    
+    # Until the TP pairs are all counted for, remove the ID that contributes the most, the next and so on
+    tmp.pairs.small <- tmp.pairs
+    id.ind <- 1
+    store.sizes <- c(dim(tmp.pairs.small)[1])
+    
+    while (dim(tmp.pairs.small)[1] > 0) {
+      
+      ## Matching examples
+      # The ID string will be present in the following form
+      # \\b
+      # \\b -> boundary 
+      # ;? (one or zero ;) 
+      # curr.id (actual ID string)
+      # string = c("178", '123;178;124', '178;124', '123;178', "1178", "1788", '123;1178', '1178;124', '123;1178;124')
+      # grepl("\\b;?178;?\\b", string, fixed = FALSE)
+      # TRUE  TRUE  TRUE  TRUE FALSE FALSE FALSE FALSE FALSE
+      curr.id.pattern <- paste0('\\b;?', curr.id, ';?\\b')
+      log.ind <- unlist(lapply(tmp.pairs.small$ID, grepl, pattern = curr.id.pattern, fixed = FALSE))
+      
+      # Now remove pairs associated with that ID
+      tmp.pairs.small <- tmp.pairs.small[!log.ind, ]
+      # print(dim(tmp.pairs.small)[1])
+      store.sizes <- c(store.sizes, dim(tmp.pairs.small)[1])
+      
+      if (dim(tmp.pairs.small)[1] == 0){
+        break
+      }
+      
+      unique.IDs.new <- unique(unlist(strsplit(paste(tmp.pairs.small$ID, collapse = ';'), split = ';')))
+      ID.contribution <- matrix(0, nrow = length(unique.IDs.new), ncol = 1)
+      names(ID.contribution) <- unique.IDs.new
+      
+      for (j in seq(1, dim(tmp.pairs.small)[1], 1) ) {
+        
+        # each ID has value (as we are only keeping TPs)
+        tmp.names <- unlist(strsplit(tmp.pairs.small$ID[j], ';'))
+        
+        # for each individual ID in the ID column
+        for (k in tmp.names){
+          ID.contribution[k] <- ID.contribution[k] + 1 # Initialized with 0
+        }
+      }
+      
+      # Save ID and contribution
+      max.ind <- which(ID.contribution == max(ID.contribution, na.rm = TRUE))
+      curr.id <- names(max.ind[1])
+      final.contribution.matrix[curr.id,i] <- ID.contribution[curr.id]
+      
+      id.ind <- id.ind + 1
+    }
+    # sort(final.contribution.matrix[final.contribution.matrix[,i] > 0, i], decreasing = T)
+  }
+  
+  # tmp <- final.contribution.matrix
+  # final.contribution.matrix <- tmp
+  
+  # Remove those IDs that didn't contribute to any TP pairs (in stepwise contribution)
+  nonzero.cont.ind <- which(!apply(final.contribution.matrix, 1, sum) == 0)
+  final.contribution.matrix <- final.contribution.matrix[nonzero.cont.ind, ]
+  
+  ## Now we have to map the IDs to the actual names of the entity (Complex) - We are keeping a smaller set intentionally
+  ia <- intersect(as.character(summary.standard$ID), row.names(final.contribution.matrix)) # Common complex IDs
+  
+  output.stepwise.contribution <- as.data.frame(final.contribution.matrix[ia, ])
+  colnames(output.stepwise.contribution) <- unlist(lapply(as.character(cutoff.all), paste, 'Precision', sep = '_'))
+  
+  # Add the name of complexes as the first column
+  ind_name <- match(ia, as.character(summary.standard$ID)) # identical(ia, as.character(summary.standard[ind_name,]$ID))
+  output.stepwise.contribution <- cbind(summary.standard[ind_name,]$Name, output.stepwise.contribution, stringsAsFactors = F)
+  # output.stepwise.contribution <- cbind(summary.standard[ia,]$Name, output.stepwise.contribution, stringsAsFactors = F) 
+  colnames(output.stepwise.contribution)[1] <- 'Name'
+  
+  # Sort by the maximum Precision cutoff
+  ind <- order(output.stepwise.contribution[, dim(output.stepwise.contribution)[2]], decreasing = T)
+  output.stepwise.contribution <- output.stepwise.contribution[ind,]
+  
+  # Convert factor to character
+  # output.stepwise.contribution <- data.frame(lapply(output.stepwise.contribution, as.character), stringsAsFactors=FALSE)
+  
+  return (output.stepwise.contribution)
+}
+
+
+#' Remove a complex (or complexes) to re-evaluate the data
+#' @param data.standard input data: either co-annotation standard or output of CalculatePredictionAndTrueOnLibraryProfiles as a data.frame (need the 'ID' column for both)
+#' @param ids the complex ids to remove
+#' @param replace
+#'  Way1 (replace = false): Remove the positive pairs associated to ids.
+#'  This reduces the size of the data a bit.
+#'  Way2 (replace = true): Convert the positive pairs to negatives. 
+#'  This will maintain the size (number of pairs) of the data.
+#' @export
+#' 
+getSubsetOfCoAnnRemoveIDs <- function(data.standard, ids, replace = FALSE){
+  
+  ## *** Check input data format
+  if(class(data.standard) != 'data.frame'){
+    stop ("data.standard is supposed to be data.frame")
+  }
+  if(class(ids) != 'character'){
+    stop ("ids is supposed to be a character vector")
+  }
+  
+  ## Get the positive examples (TPs)
+  if (sum(grepl('true', colnames(data.standard)))){
+    log.ind.pos = which(data.standard$true == 1)  
+  } else if (sum(grepl('is_annotated', colnames(data.standard)))){
+    log.ind.pos = which(data.standard$is_annotated == 1)  
+  } else{
+    stop ("ill-formated input: no column named 'is_annotated' or 'true' ")
+    return (NULL)
+  }
+  data.input = data.standard[log.ind.pos,] # 39583
+  
+  interested.indices = c()
+  for (complex.id.str in ids){ # '320'
+    # complex.id.str <- ids
+    
+    # Find those that contain '320'
+    log.ind.1 = which(grepl(complex.id.str, data.input$ID) == TRUE) # 3021
+    # data.input[log.ind.1, ]
+    
+    # Among those from log.ind.1, there maybe some that contain '320'
+    # as subset ('6320' or '3204' for example). We want to keep those.
+    
+    # Add back the data that contains '6320' but not '320'
+    # IDs <- lapply(strsplit(data.input$ID[log.ind.1], ';'), %in%, complex.id.str)
+    id.membership <- lapply(strsplit(data.input$ID[log.ind.1], ';'), is.element, complex.id.str)
+    log.ind.2 <- which(unlist(lapply(id.membership, sum)) == 1)
+    interested.indices = c(interested.indices, log.ind.1[log.ind.2])
+    
+    data.input[interested.indices, ]
+  }
+  
+  interested.indices = unique(interested.indices) # 3003
+  length(interested.indices)
+  
+  # Final data
+  if (replace == FALSE){ # Way1: Remove the positive examples associated with '320'
+    data.output = data.standard
+    data.output <- data.output[-log.ind.pos[interested.indices], ]
+  } 
+  else { # Way 2: Convert the positive examples associated with '320' to negative
+    data.output = data.standard;            
+    data.output$is_annotated[log.ind.pos[interested.indices]] = 0 # Postive is 1
+  }
+ 
+  return (data.output) 
+}

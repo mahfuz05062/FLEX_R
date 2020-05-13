@@ -1,0 +1,249 @@
+---
+title: "Analyzing genome-wide perturbation data with FLEX"
+author: "Mahfuzur Rahman"
+date: "`r Sys.Date()`"
+# output: rmarkdown::html_vignette
+output: pdf_document
+toc: true
+fig_width: 5
+fontsize: 9pt
+vignette: >
+  %\VignetteIndexEntry{"Analyzing genome-wide perturbation data with FLEX"}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r,include=FALSE}
+library(knitr)
+pdf.options(useDingbats = FALSE)
+opts_chunk$set(resize.width = "0.7\\textwidth", 
+#               fig.path="myfigure/",
+#               fig.align='center',
+#               fig.show = 'hold',
+               dev = c('png','pdf'),
+               dpi = 100,
+               cache = TRUE,
+               tidy = FALSE)
+```
+
+
+
+```{r, include = FALSE}
+## ------ This is how to use Rmarkdown commands ----------------
+# https://bookdown.org/yihui/rmarkdown/basics.html
+# https://r-pkgs.org/vignettes.html
+# https://bookdown.org/yihui/rmarkdown-cookbook/how-to-read-this-book.html
+# https://www.earthdatascience.org/courses/earth-analytics/document-your-science/rmarkdown-code-chunks-comments-knitr/
+# `` highlights that phrase
+# - for bullet points
+```
+
+
+# Overview
+**FLEX** (FunctionaL Evaluation of eXperimental perturbation screens) is designed for a systematic evaluation of genome-wide data. It can be divided into three broad parts. 
+
+- Generation of gold-standard evaluation data
+- Global functional evaluation (Precision Recall Curves)
+- Dissect and study constituents of the global performance
+
+
+# Generation of gold standards
+Due to the availability biological standards of different complexity and purpose, we accumulate a varities of gold-standards. In FLEX, we typically use Co-annotation data standards from protein complexes (CORUM), Pathways and GO Biological Processes; however, FLEX can be utilized, in general, to make co-annotation gold standards from many different data sources. The only requirement is that the input data has to fit the criteria presented next.
+
+For this vignette, we will focus on CORUM protein complexes. We will show how to use the CORUM data to generate a co-annotation gold standard. The CORUM data (only the human part) is included with the package, and can be loaded using:
+
+```{r, loadRawData}
+library(FLEX)
+data('data_complex', package = 'FLEX')
+```
+
+This input data follows a four column format and the first three columns: ID (complex ID here), Name (Complex Name), Genes (genes inside the complex), and Length of the complex (number of genes inside the complex). In cases where an ID is not directly available, a pseudo ID (starting from 1 to number of complexes) will do!
+```{r}
+data_complex[1:3,]
+```
+
+Now that we have the input data, we can generate the CORUM/complex co-annotation standard using a single line of code. This generates a co-annotation standard where each pair of genes from within a complex gets a True (1) and pair of genes from between complexes get 1 False (0) value. 
+```{r, include = FALSE}
+# I didn't want to show the progress bar here
+file_name <- '/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/CORUM_CA.Rdata'
+data.ca <- MakeCoAnnotationFromGeneSymbols(data_standard = data_complex, 
+                                                 overlap_length = 1, 
+                                                 file_location = file_name)
+```
+
+``` {r, eval=FALSE}
+file_name <- '/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/CORUM_CA.Rdata'
+data.ca <- MakeCoAnnotationFromGeneSymbols(data_standard = data_complex, 
+                                                 overlap_length = 1, 
+                                                 file_location = file_name)
+```
+
+
+The co-annotation stored is stored as a four column `data.frame`; the first two-columns (`gene1` and `gene2`) are the gene-pairs, the third one (`is_annotated`) is the co-annotation value (1/0) as described above and the last one (`ID`) is the source(s) of the co-annotation.
+```{r}
+data.ca[96:98,]
+```
+
+
+There are some additional parameters that can be used. For example, if we are interested in a subset of the co-annotation (i.e. `KEGG` pathways only), we have to set the `subset_str` parameter; or if we do not want to generate the co-annotation standard every time we use it, we can set the parameter `file_location` to provide a location of the file to store the data. If the file already exists, FLEX will skip the generation part and use the stored file instead.
+
+``` {r, eval = FALSE}
+data.ca <- MakeCoAnnotationFromGeneSymbols(data_standard = data_pathway, 
+                                                 overlap_length = 1, 
+                                                 subset_str = c('KEGG'))
+```
+
+
+# Global Functional Evaluation
+The next part of the pipeline is to generate scores for pairwise genes and line that up against the co-annotation gold standard to evaluate ther functional performance of the scores. These scores can come from:
+- Direct genetic interaction score between pairs
+- Profile similarity (pearson correlation) between gene pairs, where each gene has a genetic interaction profile or a dependency profile (i.e. from [**DepMap**](https://depmap.org/portal/))
+- Any computational method that assigns a quantitative score between gene pairs.
+
+Here, we are going to use profile similarity on DepMap dependency profiles to demonstrate the usefulness of FLEX.
+
+## Profile Similarity
+To use the DepMap data with our package, we formatted it with a tab-delimited format where each row belongs to a gene and each column belongs to a screen. We expect a header for the file (either names for each column, or every column except for the first one).
+
+```{r}
+if (file.exists('Depmap_19Q2.Rdata')){
+  load('Depmap_19Q2.Rdata')
+} else{
+  file.int <- 'Ceres_score_19Q2_with_depmap_id.txt'
+  data.interaction <- GetInteractionData(file.int)
+  save(data.interaction, file = 'Depmap_19Q2.Rdata')
+}
+```
+
+Once we have the data loaded, we calculate the profile similarity and line up the correlation scores against the co-annotation values for gene pairs.
+
+```{r, Generate_19Q2_Association}
+if (file.exists('Complex_Depmap_19Q2.Rdata')){
+  load('Complex_Depmap_19Q2.Rdata')
+}else{
+  Complex.DepMap.19Q2 <- CalculatePredictionAndTrueOnLibraryProfiles(data.ca, 
+                                                                     data.interaction)
+  save(Complex.DepMap.19Q2, file = 'Complex_Depmap_19Q2.Rdata') 
+}
+```
+
+A time limiting step for `CalculatePredictionAndTrueOnLibraryProfiles` is the calculation of pairwise profile similarities, which becomes inefficient with the increase in the size of the gene profile (length of each row). One suggestion is to pre-calculate the pairwise correlations specially if we use the same input data to do multiple PR curves (for example, on different evaluation standards). `CalculatePredictionAndTrueOnLibraryProfiles` can work with both the profiles and the pairwise correlations!
+```{r, eval = FALSE}
+system.time(pairwise.correlation <- cor(t(data.interaction), 
+                                        use = 'pairwise.complete.obs', 
+                                        method = 'pearson'))
+Complex.DepMap.19Q2 <- CalculatePredictionAndTrueOnLibraryProfiles(data.ca, 
+                                                                     pairwise.correlation)
+```
+
+## Precision Recall Curves
+Now that we have the scores and co-annotation values for the gene pairs, we can evaluate how well the scores capture the co-annotations. We visualazie this as a Precision-Recall (PR) curve which captures the global performance of the scored data in terms of capturing function information. However, instead of Recall, we plot number of true positives on the X-axis which accentuates the top part of the PR curve.
+
+```{r, PR_on_19Q2, fig.width=5, fig.height=4, fig.align="center"}
+pred.ca <- list(out_Ceres = list(true = Complex.DepMap.19Q2$true, 
+                                 predicted = Complex.DepMap.19Q2$predicted))
+PlotPRSimilarity (pred.ca, fig.title = 'DepMap 19Q2', fig.labs = c('TP', 'Precision'), 
+                  legend.names = c(), legend.color = 'red', save.figure = FALSE)
+```
+
+## Comparison between different data
+We can use the PR curve performance to compare between different datasets or score from different methods on the same dataset. Here we compare two different versions of the DepMap dataset to show that the global functional performance of the DepMap data is increasing with additional screens and refined scores.
+
+```{r, 19Q2_vs_18Q3, fig.width=5, fig.height=4, fig.align="center"}
+# Read the data
+if (file.exists('Depmap_18Q3.Rdata')){
+    load('Depmap_18Q3.Rdata')
+} else{
+    file.int <- 'Ceres_score_18Q3_with_depmap_id.txt'
+    data.interaction <- GetInteractionData(file.int)
+    save(data.interaction, file = 'Depmap_18Q3.Rdata')
+}
+
+# Create the association
+if (file.exists('Complex_Depmap_18Q3.Rdata')){
+  load('Complex_Depmap_18Q3.Rdata')
+} else{
+    Complex.DepMap.18Q3 <- CalculatePredictionAndTrueOnLibraryProfiles(data.ca, 
+                                                                       data.interaction)
+    save(Complex.DepMap.18Q3, file = 'Complex_Depmap_18Q3.Rdata')
+}
+
+# Combine the two associations in a list
+pred.ca <- list(out_19Q2 = list(true = Complex.DepMap.19Q2$true, 
+                                 predicted = Complex.DepMap.19Q2$predicted))
+pred.ca <- append(pred.ca, list(out_18Q3 = list(true = Complex.DepMap.18Q3$true, 
+                                               predicted = Complex.DepMap.18Q3$predicted)))
+
+# Plot the PR Curves
+PlotPRSimilarity (pred.ca, fig.title = 'DepMap version Comparison', 
+                  fig.labs = c('TP', 'Precision'), legend.names = c('19Q2', '18Q3'), 
+                  legend.color = c('#de2d26', '#3182bd'), save.figure = FALSE)
+```
+
+
+# Dissect and study constituents of the global performance
+The PR curves give us a global look at the functional performance of a dataset. However, all of the individual entities (i.e. complex) that make up the global performance do not contribute equally, and therefore, we also want to know the local entities (i.e. individual complexes) that drive the global performance. 
+
+## Contribution Scatter Plot
+The first way we look at the local entities is we generate entity-wise area under the precision recall curve (AUPRC) values. These AUPRC values reflects which complexes are being captured better than other complexes in this global performance. The following code and figure shows a contribution scatter plot between complex length and AUPRC values.
+
+```{r, contribution_scatter, fig.width=5, fig.height=4, fig.align="center"}
+if (file.exists('Complex_AUPRC_DepMap_19Q2.txt')){
+  data.AUPRC <- read.table('Complex_AUPRC_DepMap_19Q2.txt', stringsAsFactors=FALSE, 
+                           sep = "\t", header = T, quote = '')
+}else{
+  entity.matrix <- as.data.frame(Complex.DepMap.19Q2, stringsAsFactors = FALSE)
+  data.AUPRC <- GetAreaUnderPRCurveForEntities (data_complex, data.ca, entity.matrix)
+  write.table(data.AUPRC, 'Complex_AUPRC_DepMap_19Q2.txt', sep = '\t', 
+              row.names = FALSE, quote = FALSE)
+}
+
+plot.data <- data.AUPRC[!duplicated(data.AUPRC$Name), ] # Duplicated rows?
+PlotContributionScatter (plot.data, fig.title = 'contribution_scatter', 
+                         fig.labs = c('AUPRC', 'Complex size'), 
+                         show.text = FALSE, save.figure = FALSE)
+```
+
+## Contribution Structure Plot
+To get insights into the contribution of complexes in a different way, we wanted to know how many unique complexes we need to capture the global performance. We took a greedy approach to find this answer; we sorted all the complexes by the number of true positive pairs they contribute at different precisions, removed those pairs and then iteratively looked for the next complexes until all true positive pairs are accounted for. As we are more interested toward the top part of the curve (higher precisions), we then sorted the complexes based on their contributions at higher precisions. Eventually, we generated a muller plot like plot to show the contribution structure/diversity of the CORUM complexes.
+
+```{r, contribution_structure, fig.width=5, fig.height=8, fig.align="center"}
+# Find the Precision cutoffs to use
+out_19Q2 <- GenerateDataForPerfCurve(value.predicted = Complex.DepMap.19Q2$predicted, 
+                                        value.true = Complex.DepMap.19Q2$true, 
+                                        x.axis = 'TP', y.axis = 'precision')
+precision_cutoffs <- c(out_19Q2$y[length(out_19Q2$y)], seq(0.1, 1, 0.025))
+precision_cutoffs[1] <- round(precision_cutoffs[1], 4)
+
+if (file.exists('Contribution_of_complexes_stepwise_DepMap_19Q2.txt')){
+  output.stepwise.contribution <- 
+    read.table('Contribution_of_complexes_stepwise_DepMap_19Q2.txt', 
+               stringsAsFactors=FALSE, sep = "\t", header = T)
+} else{
+  # Generate the stepwise contribution of complexes
+  Pairs.in.data <- data.frame(true = Complex.DepMap.19Q2$true, 
+                            predicted = Complex.DepMap.19Q2$predicted, 
+                            ID = Complex.DepMap.19Q2$ID, stringsAsFactors = FALSE)
+  output.stepwise.contribution <- 
+    GetStepwiseContributionOfEntities(Pairs.in.data, precision_cutoffs, data_complex)
+  write.table(output.stepwise.contribution, 
+              'Contribution_of_complexes_stepwise_DepMap_19Q2.txt', 
+              sep="\t", col.names = TRUE, row.names = FALSE, quote = FALSE)  
+}
+
+# Remove the duplicate complexes (if any)
+output.stepwise.contribution <- 
+  output.stepwise.contribution[!duplicated(output.stepwise.contribution$Name),]
+
+PlotContributionStructure(output.stepwise.contribution, cutoff.all = precision_cutoffs, 
+                          min.pairs = 10, fig.title = 'Contriubtion Structure DepMap 19Q2', 
+                          save.figure = FALSE)
+```
+

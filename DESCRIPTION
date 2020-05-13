@@ -1,0 +1,15 @@
+Package: FLEX
+Title: FunctionaL Evaluation of eXperimental perturbation (i.e. genome wide knockout) screens 
+Description: A set of tools to explore functional information and bias in genome-wide perturbation data.
+Version: 1.0.0
+Author: Mahfuzur Rahman <rahma118@umn.edu>
+Maintainer: Mahfuzur Rahman <rahma118@umn.edu>
+Depends: R (>= 3.4.3)
+Encoding: UTF-8
+Imports: 
+Suggests: knitr, rmarkdown
+LazyData: true
+VignetteBuilder: knitr
+License: GPL-3
+Packaged: 2020-02-19 10:00 CST; ubuntu
+RoxygenNote: 7.1.0
