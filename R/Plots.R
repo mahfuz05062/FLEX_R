@@ -246,7 +246,7 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
     }
   }
 
-  colors.direct <- c('FFFF00', '#00A4FF') # (pos, neg)
+  colors.direct <- c('#FFFF00', '#00A4FF') # (pos, neg)
   
   ## 1. Plotting direct positives
   data.x.axis <- pos.PR$x[-(1:ind.pos.10[length(ind.pos.10)])]
