@@ -362,14 +362,17 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   ## Subset the data using unique queries 
   queries <- unlist( lapply( strsplit(colnames(data.interaction), '_'), '[[', 1) ) # Get the first element of the list (strings separated by '_')
   queries_unique <- unique(queries)
-  
+
+  # If there are multiple replicates, we are taking the first unique one  
   indices <- match(queries_unique, queries)
   data.interaction <- data.interaction[,indices]
   queries <- queries[indices]
   queries.original <- colnames(data.interaction)
   colnames(data.interaction) <- queries # queries.original[indices]
   queries.full <- queries.original[indices] # Complete names of the query
-  
+
+  # ** TODO: Take the aggregate of the replicates, keep options for best or mean of replicates
+
   
   ## PR Curve for each query screen (using numeric interaction data)
   combined.true.neg <- c()

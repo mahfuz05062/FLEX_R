@@ -245,6 +245,8 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
       pdf(paste(outfile.name, ".pdf", sep = '') )   
     }
   }
+
+  colors.direct <- c('FFFF00', '#00A4FF') # (pos, neg)
   
   ## 1. Plotting direct positives
   data.x.axis <- pos.PR$x[-(1:ind.pos.10[length(ind.pos.10)])]
@@ -260,7 +262,7 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
          log = 'x', type = 'l', bty = 'L', main = fig.title,
          xlab = fig.labs[1], ylab = fig.labs[2], lwd = 2, 
          cex.lab = 1.2, cex.main = 1.2, cex.axis = 1.2,
-         col = 'yellow', xaxt='n') 
+         col = colors.direct[1], xaxt='n') 
     axis(1, at=10^(x.axis.ticks), 
          labels=as.expression(lapply(x.axis.ticks, function(E) bquote(10^.(E)))),
          cex = 1.2)
@@ -270,16 +272,16 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
     plot(data.x.axis, data.y.axis, xlim = c(10, plot.xlim), ylim = c(0, plot.ylim), 
          type = 'l', 
          bty = "L", # 'n' -> no box, nothing - all boxes
-         xlab = fig.labs[1], ylab = fig.labs[2], lwd = 2, col = legend.color[i], cex = 1.2)
+         xlab = fig.labs[1], ylab = fig.labs[2], lwd = 2, col = colors.direct[1], cex = 1.2)
   }
   
   ## 2. Overlaying direct negatives
   data.x.axis <- neg.PR$x[-(1:ind.neg.10[length(ind.neg.10)])]
   data.y.axis <- neg.PR$y[-(1:ind.neg.10[length(ind.neg.10)])]
-  lines(data.x.axis, data.y.axis, col='blue', lwd = 2) 
+  lines(data.x.axis, data.y.axis, col=colors.direct[2], lwd = 2) 
   
   
-  legend("topright", legend = c('Positive', 'Negative'), fill = c('yellow', 'blue'), 
+  legend("topright", legend = c('Positive', 'Negative'), fill = colors.direct, 
          cex = 1, 
          text.col = "black", horiz = F)
   # bty = "n", # to remove the box
