@@ -43,7 +43,7 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     # return (NULL)
   }
   
-  # 1. Pairwise data in the format of (Gene1 Gene2 Similarity)
+  # 1. Pairwise data in the format of Gene1 Gene2 Similarity
   if (dim(data.interaction)[2] == 3) {
     
     # We want to check the data types for this format
@@ -63,22 +63,19 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     # Check: 1. Square, 2. Symmetric
     print('Pairwise correlation/similarity matrix provided ...')
     
-    # Sort the interaction.data by gene names (library side)
+    # Sort the pairwise data by gene names (we need to do it on both row and column side)
     if (is.unsorted(rownames(data.interaction))){
-      gene.names <- rownames(data.interaction)
+      gene.names <- rownames(data.interaction) # Names are already associated to the rows and columns
       ind <- order(gene.names)
-      data.interaction <- data.interaction[ind,]
-      row.names(data.interaction) <- gene.names[ind]
-      ## TODO: also assign col.names with the same value
+      data.interaction <- data.interaction[ind,ind]      
     }
     
-    pairwise.correlation <- data.interaction
-    ## TODO: as.matrix(data.interaction) # Otherwise we can't call some functions on it!
+    pairwise.correlation <- as.matrix(data.interaction)
     
     return (FromAllPairwiseCorrelation(data.standard, pairwise.correlation))
   } 
   
-  # 3. Genes (row) * screens (column) matrix provided
+  # 3. Genes (row) * screens (column) matrix provided (GI or fitness, for example)
   else{ 
     # Calculate pairwise.correlation
     
@@ -90,10 +87,9 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
       row.names(data.interaction) <- gene.names[ind]
     }
     
-    print('calculating pairwise correlation ...')
-    system.time(pairwise.correlation <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson'))
-
-	## TODO: use 'complete.obs'; we don't have a lot of NaNs in the data
+    print('calculating pairwise correlation ...')    
+    system.time(pairwise.correlation <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson')) # Faster
+    # system.time(pairwise.correlation <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson')) # previous default but might be too complicated to interpret with lots of missing data.
     
     return (FromAllPairwiseCorrelation(data.standard, pairwise.correlation))
   }
