@@ -69,9 +69,12 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
       ind <- order(gene.names)
       data.interaction <- data.interaction[ind,]
       row.names(data.interaction) <- gene.names[ind]
+      ## TODO: also assign col.names with the same value
     }
     
-    pairwise.correlation = data.interaction
+    pairwise.correlation <- data.interaction
+    ## TODO: as.matrix(data.interaction) # Otherwise we can't call some functions on it!
+    
     return (FromAllPairwiseCorrelation(data.standard, pairwise.correlation))
   } 
   
@@ -89,6 +92,8 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     
     print('calculating pairwise correlation ...')
     system.time(pairwise.correlation <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson'))
+
+	## TODO: use 'complete.obs'; we don't have a lot of NaNs in the data
     
     return (FromAllPairwiseCorrelation(data.standard, pairwise.correlation))
   }
