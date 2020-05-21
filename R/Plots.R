@@ -55,9 +55,14 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
     }
   }
   
-  if (length(legend.color) != length(pred.ca)){
+  if (length(legend.color) < length(pred.ca)){
     warning('Color not provided for each curve !! Making our own ')
-    legend.color = palette(rainbow(n = length(pred.ca)))
+    if (length(pred.ca) == 1){
+		legend.color = c('blue')
+	}
+	else{
+		legend.color = palette(rainbow(n = length(pred.ca)))
+	}
   }
 
   

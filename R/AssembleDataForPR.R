@@ -71,6 +71,7 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     }
     
     pairwise.correlation <- as.matrix(data.interaction)
+    rm(data.interaction) # Not needed anymore (It's a 17K * 17K matrix here, so might be a bottleneck in low RAM pcs)
     
     return (FromAllPairwiseCorrelation(data.standard, pairwise.correlation))
   } 
@@ -88,9 +89,11 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     }
     
     print('calculating pairwise correlation ...')    
-    system.time(pairwise.correlation <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson')) # Faster
+    pairwise.correlation <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson') # Faster
     # system.time(pairwise.correlation <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson')) # previous default but might be too complicated to interpret with lots of missing data.
-    
+
+    rm(data.interaction)
+
     return (FromAllPairwiseCorrelation(data.standard, pairwise.correlation))
   }
 }
