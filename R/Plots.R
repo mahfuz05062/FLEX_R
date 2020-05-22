@@ -287,7 +287,7 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
   
   
   legend("topright", legend = c('Positive', 'Negative'), fill = colors.direct, 
-         cex = 1, 
+         cex = 1, bty = "n",
          text.col = "black", horiz = F)
   # bty = "n", # to remove the box
   

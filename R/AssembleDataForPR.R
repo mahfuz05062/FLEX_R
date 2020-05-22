@@ -72,6 +72,7 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     
     pairwise.correlation <- as.matrix(data.interaction)
     rm(data.interaction) # Not needed anymore (It's a 17K * 17K matrix here, so might be a bottleneck in low RAM pcs)
+    gc()
     
     return (FromAllPairwiseCorrelation(data.standard, pairwise.correlation))
   } 
