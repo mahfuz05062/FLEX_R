@@ -237,22 +237,41 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
                          save.figure = FALSE) {
   
   ## *** Calculate the PR data to plot for positive and negative interactions
-  pos.PR <- GenerateDataForPerfCurve(value.predicted = plot.data$data$Score, value.true = plot.data$data$True, x.axis = 'TP', y.axis = 'precision', neg.to.pos = FALSE)
-  neg.PR <- GenerateDataForPerfCurve(value.predicted = plot.data$data$Score, value.true = plot.data$data$True, x.axis = 'TP', y.axis = 'precision', neg.to.pos = TRUE)
+  score.pos.int <- plot.data$data$Score[plot.data$data$Score > 0]
+  true.pos.int <- plot.data$data$True[plot.data$data$Score > 0]
+  pos.PR <- GenerateDataForPerfCurve(value.predicted = score.pos.int, value.true = true.pos.int, x.axis = 'TP', y.axis = 'precision', neg.to.pos = FALSE)
+  
+  score.neg.int <- plot.data$data$Score[plot.data$data$Score < 0]
+  true.neg.int <- plot.data$data$True[plot.data$data$Score < 0]
+  neg.PR <- GenerateDataForPerfCurve(value.predicted = score.neg.int, value.true = true.neg.int, x.axis = 'TP', y.axis = 'precision', neg.to.pos = TRUE)
+  
+  # pred.ca <- list(positive = list(true = true.pos.int, predicted = score.pos.int))
   
   ## Calculate the max y-lim and x-lim for the plots 
   ind.pos.10 <- which(pos.PR$x == 9)
   ind.neg.10 <- which(neg.PR$x == 9)
   
-  plot.xlim = max(max(pos.PR$x[-(1:ind.pos.10[length(ind.pos.10)])]), 
-                  max(neg.PR$x[-(1:ind.neg.10[length(ind.neg.10)])]))
+  if (length(ind.pos.10) > 0){ # What if it's not there?
+    # Points until TP of 10 are excluded
+    plot.xlim = max(max(pos.PR$x[-(1:ind.pos.10[length(ind.pos.10)])]), 
+                    max(neg.PR$x[-(1:ind.neg.10[length(ind.neg.10)])]))
+  } else{
+    plot.xlim = max(max(pos.PR$x), max(neg.PR$x))
+  }
   
-  plot.ylim = max(max(pos.PR$y[-(1:ind.pos.10[length(ind.pos.10)])]), 
-                  max(neg.PR$y[-(1:ind.neg.10[length(ind.neg.10)])]))
+  if (length(ind.neg.10) > 0){
+    plot.ylim = max(max(pos.PR$y[-(1:ind.pos.10[length(ind.pos.10)])]), 
+                    max(neg.PR$y[-(1:ind.neg.10[length(ind.neg.10)])]))
+  } else{
+    plot.ylim = max(max(pos.PR$y), max(neg.PR$y))
+  }
+  
+  plot.xlim <- 10 ^ ceiling(log10(plot.xlim)) # Getting the next log10 boundary
   plot.ylim <- round(plot.ylim + 0.01, 2)
   
   
-  # Make arrangements to save the plot to an output file
+  ## Make arrangements to save the plot to an output file
+  colors.direct <- c('#FFFF00', '#00A4FF') # (pos, neg)
   if (save.figure == TRUE){
     if (outfile.type == 'png'){
       png(paste(outfile.name, ".png", sep = ''), width = 4, height = 4, units="in", res = 300) 
@@ -260,12 +279,15 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
       pdf(paste(outfile.name, ".pdf", sep = '') )   
     }
   }
-
-  colors.direct <- c('#FFFF00', '#00A4FF') # (pos, neg)
   
-  ## 1. Plotting direct positives
-  data.x.axis <- pos.PR$x[-(1:ind.pos.10[length(ind.pos.10)])]
-  data.y.axis <- pos.PR$y[-(1:ind.pos.10[length(ind.pos.10)])]
+  ## ------------- 1. Plotting direct positives -------------
+  if (length(ind.pos.10) > 0){
+    data.x.axis <- pos.PR$x[-(1:ind.pos.10[length(ind.pos.10)])]
+    data.y.axis <- pos.PR$y[-(1:ind.pos.10[length(ind.pos.10)])]
+  } else{
+    data.x.axis <- pos.PR$x
+    data.y.axis <- pos.PR$y
+  }
   
   # Adding customized xtick labels
   x.axis.ticks <- seq(1, (floor(log10(plot.xlim))), 1)
@@ -281,8 +303,7 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
     axis(1, at=10^(x.axis.ticks), 
          labels=as.expression(lapply(x.axis.ticks, function(E) bquote(10^.(E)))),
          cex = 1.2)
-  }
-  else{
+  } else{
     # Normal plot
     plot(data.x.axis, data.y.axis, xlim = c(10, plot.xlim), ylim = c(0, plot.ylim), 
          type = 'l', 
@@ -290,16 +311,20 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
          xlab = fig.labs[1], ylab = fig.labs[2], lwd = 2, col = colors.direct[1], cex = 1.2)
   }
   
-  ## 2. Overlaying direct negatives
-  data.x.axis <- neg.PR$x[-(1:ind.neg.10[length(ind.neg.10)])]
-  data.y.axis <- neg.PR$y[-(1:ind.neg.10[length(ind.neg.10)])]
+  ## ------------- 2. Overlaying direct negatives -------------
+  if (length(ind.neg.10) > 0){
+    data.x.axis <- neg.PR$x[-(1:ind.neg.10[length(ind.neg.10)])]
+    data.y.axis <- neg.PR$y[-(1:ind.neg.10[length(ind.neg.10)])]
+  } else{
+    data.x.axis <- neg.PR$x
+    data.y.axis <- neg.PR$y
+  }
   lines(data.x.axis, data.y.axis, col=colors.direct[2], lwd = 2) 
   
   
   legend("topright", legend = c('Positive', 'Negative'), fill = colors.direct, 
-         cex = 1, bty = "n",
+         cex = 1, bty = "n", # remove box
          text.col = "black", horiz = F)
-  # bty = "n", # to remove the box
   
   # When all the plotting is done (Need to work on this)
   if (save.figure == TRUE){
