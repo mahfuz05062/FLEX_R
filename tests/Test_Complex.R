@@ -202,7 +202,9 @@ PlotPRSimilarity (pred.ca, fig.title = 'Complex Removal Comparison', fig.labs = 
 
 
 
-## Need to revise (check) the following
+
+
+## Following analysis are for testing the package
 if (FALSE){
   # ---------------------------------------------
   #  9. Category Plot
@@ -272,5 +274,19 @@ if (FALSE){
   legend.col.neg <- c(rgbConversion(0, 118, 239), rgbConversion(158, 202, 225))
   
   PlotPRSimilarity (pred.ca = pred.ca, neg.to.pos = TRUE, fig.title = fig.title, legend.names = legend.names, legend.color = legend.col.neg, save.figure = FALSE, is.bgdline = TRUE)
+}
+
+
+
+if (FALSE){
+  ## PerfCurve Test (Compare with Matlab for GLS)
+  load('/home/mahfuz/Desktop/CRISPR/FLEX/Analysis/Supplementary_Figures/S5/Contr_Str_Plot/PR_Similarity_Complex_GLS_weighted.RData')
+  test <- GenerateDataForPerfCurve(value.predicted = Complex.GLS.weighted$predicted, 
+                                   value.true = Complex.GLS.weighted$true, 
+                                   x.axis = 'TP', y.axis = 'precision')
+  
+  pred.ca <- list(out_orig = list(true = Complex.GLS.weighted$true, predicted = Complex.GLS.weighted$predicted))
+  
+  PlotPRSimilarity (pred.ca, subsample = TRUE, fig.title = 'Complex Removal Comparison', fig.labs = c('TP', 'Precision'), legend.names = c('Original', '55S_removed'), legend.color = c('#de2d26', '#3182bd'), save.figure = FALSE)
 }
 

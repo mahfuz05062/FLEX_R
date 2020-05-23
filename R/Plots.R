@@ -58,28 +58,27 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
   if (length(legend.color) < length(pred.ca)){
     warning('Color not provided for each curve !! Making our own ')
     if (length(pred.ca) == 1){
-		legend.color = c('blue')
-	}
-	else{
-		legend.color = palette(rainbow(n = length(pred.ca)))
-	}
+      legend.color = c('blue')
+    }
+    else{
+      legend.color = palette(rainbow(n = length(pred.ca)))
+    }
   }
 
   
   ## *** Make the data to plot on the x (TP) and y (Precision) axis
   for (i in 1 : length(pred.ca)){
     
-    if (neg.to.pos){
-      test <- GenerateDataForPerfCurve(value.predicted = pred.ca[[i]]$predicted, value.true = pred.ca[[i]]$true, neg.to.pos = TRUE, x.axis = 'TP', y.axis = 'precision')
-    } else{
-      test <- GenerateDataForPerfCurve(value.predicted = pred.ca[[i]]$predicted, value.true = pred.ca[[i]]$true, neg.to.pos = FALSE, x.axis = 'TP', y.axis = 'precision')
-    }
+      test <- GenerateDataForPerfCurve(value.predicted = pred.ca[[i]]$predicted, value.true = pred.ca[[i]]$true, neg.to.pos = neg.to.pos, x.axis = 'TP', y.axis = 'precision')
     
     ## ** If we want a faster plot (less points)
     if (subsample){
-      #  Using the first precision for the same TP
-      #  TODO: Use the last precision for the same TP instead (don't think it matters much though)
+      
+      # Take the last precision value for the same TP
       unique.index <- which(!duplicated(test$x))
+      unique.index <- c(unique.index - 1, length(test$x))
+      unique.index <- unique.index[-1]
+      
       small_x <- test$x[unique.index]
       small_y <- test$y[unique.index]
       
@@ -102,8 +101,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
     
     if (i == 1){
       plot.data <- list(list(x = test$x, y = test$y))
-    }
-    else{
+    } else{
       plot.data <- append(plot.data, list(list(x = test$x, y = test$y)))
     }
   }
@@ -118,9 +116,14 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
     
     ind.10 <- which(tmp$x == 9) # Remove data for TP < 10
     
-    # The first 10 points are excluded from plotting
-    x <- max(tmp$x[-(1:ind.10[length(ind.10)])])
-    y <- max(tmp$y[-(1:ind.10[length(ind.10)])])
+    if (length(ind.10) > 0){ # What if it's not there?
+      # The first 10 points are excluded from plotting
+      x <- max(tmp$x[-(1:ind.10[length(ind.10)])])
+      y <- max(tmp$y[-(1:ind.10[length(ind.10)])])
+    } else{
+      x <- max(tmp$x)
+      y <- max(tmp$y)
+    }
     
     if (x > plot.xlim){
       plot.xlim <- x
@@ -147,8 +150,15 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
     
     tmp <- plot.data[[i]]
     ind.10 <- which(tmp$x == 9) # Remove data for TP < 10
-    data.x.axis <- tmp$x[-(1:ind.10[length(ind.10)])]
-    data.y.axis <- tmp$y[-(1:ind.10[length(ind.10)])]
+    
+    if (length(ind.10) > 0){ # What if it's not there?
+      # The first 10 points are excluded from plotting
+      data.x.axis <- tmp$x[-(1:ind.10[length(ind.10)])]
+      data.y.axis <- tmp$y[-(1:ind.10[length(ind.10)])]
+    } else{
+      data.x.axis <- tmp$x
+      data.y.axis <- tmp$y
+    }
     
     if (i == 1){ # For the first time
       if (type.plot == 'log'){
@@ -189,7 +199,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
            cex = 1.2, text.col = "black", horiz = F)
     
     # Printing some warning, just in case!
-    if (length(pred.ca) != length(legend.names)){
+    if (length(pred.ca) > length(legend.names)){
       warning('Legend not provided for all curves !!')
     }
     if (length(legend.color) != length(legend.names)){

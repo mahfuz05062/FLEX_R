@@ -29,9 +29,8 @@
 #' @export
 #' 
 GenerateDataForPerfCurve <- function(value.predicted, value.true, neg.to.pos = FALSE, x.axis = 'sensitivity', y.axis = 'precision'){
-
-  # unique.index <- which(!duplicated(data))
   
+  # Sorting direction
   if (neg.to.pos == FALSE){
     indices <- order(value.predicted, decreasing = TRUE)
   } else{
@@ -40,6 +39,7 @@ GenerateDataForPerfCurve <- function(value.predicted, value.true, neg.to.pos = F
   value.true <- value.true[indices]
   value.predicted <- value.predicted[indices]
   
+  # Calculate basic elements
   num.real.true <- sum(value.true)
   num.predicted.true <- 1 : length(value.true) # Predicted Positive <= Threshold
   
@@ -48,21 +48,27 @@ GenerateDataForPerfCurve <- function(value.predicted, value.true, neg.to.pos = F
   FN <- num.real.true - TP
   TN <- length(value.true) - (TP + FP + FN)
   
+  # ** Get the indices of unique predicted values (last occurrence)
+  unique.index <- which(!duplicated(value.predicted)) # Gives index of first occurrence
+  unique.index <- c(unique.index - 1, length(TP)) # Now, it's the last occurrence.
+  unique.index <- unique.index[-1] # The first element is 0 anyway!
+  
+  TP <- TP[unique.index]
+  FP <- FP[unique.index]
+  FN <- FN[unique.index]
+  TN <- TN[unique.index]
+  
   precision <- TP / (TP + FP) # PPV
   sensitivity <- TP / (TP + FN)  # Recall / TPR
   specificity <- FP / (FP + TN) # FPR # 
-    
-    # Find which to return for x and y
-    switch(x.axis, TP = {x = TP}, FP = {x = FP}, TN = {x = TN}, FN = {x = FN},
-           precision = {x = precision}, specificity = {x = specificity}, 
-           sensitivity = {x = sensitivity}, recall = {x = sensitivity})
-    switch(y.axis, TP = {y = TP}, FP = {y = FP}, TN = {y = TN}, FN = {y = FN},
-           precision = {y = precision}, specificity = {y = specificity}, 
-           sensitivity = {y = sensitivity}, recall = {y = sensitivity})
-  #}
   
-  # prec_reca = data.frame(precision = c(1,precision), recall = c(0,sensitivity))
-  # write.table(prec_reca, 'test_case_prec_reca_perfoldin_33.txt', row.names = F, sep = '\t')
+  # Find which to return for x and y
+  switch(x.axis, TP = {x = TP}, FP = {x = FP}, TN = {x = TN}, FN = {x = FN},
+         precision = {x = precision}, specificity = {x = specificity}, 
+         sensitivity = {x = sensitivity}, recall = {x = sensitivity})
+  switch(y.axis, TP = {y = TP}, FP = {y = FP}, TN = {y = TN}, FN = {y = FN},
+         precision = {y = precision}, specificity = {y = specificity}, 
+         sensitivity = {y = sensitivity}, recall = {y = sensitivity})
   
   # area under curve: according to trapizoidal approximation (make sense for roc or pr curve only: unit area)
   # https://www.r-bloggers.com/calculating-auc-the-area-under-a-roc-curve/
@@ -75,5 +81,4 @@ GenerateDataForPerfCurve <- function(value.predicted, value.true, neg.to.pos = F
   # sum(y * dx) + sum(dx * dy)/2
   
   return(list(x = x, y = y, auc = auc))
-
 }
