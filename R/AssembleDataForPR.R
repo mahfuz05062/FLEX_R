@@ -33,7 +33,6 @@
 #' 
 
 CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.interaction){
-  
   ## *** Check input data format
   true_classes_count <- (class(data.standard) == 'data.frame') + (class(data.interaction) == 'data.frame')
   if(true_classes_count < 2){
@@ -89,12 +88,20 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
       row.names(data.interaction) <- gene.names[ind]
     }
     
-    print('calculating pairwise correlation ...')    
-    pairwise.correlation <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson') # Faster
-    # system.time(pairwise.correlation <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson')) # previous default but might be too complicated to interpret with lots of missing data.
+    print('calculating pairwise correlation ...')
+    
+    # Check if there are a lot of NaNs in data?
+    percent.nan <- sum(is.nan(as.matrix(data.interaction))) / (dim(data.interaction)[1] * dim(data.interaction)[2])
+    
+    if (percent.nan > 0.1){ # If we have more than 20% NaNs in the data
+      pairwise.correlation <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson') # Slow, and 
+    }else{
+      pairwise.correlation <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson') # Fast  
+    }
+    
+    ## *** TODO: Add inner product as the similarity for cases where we have a lot of NaNs or smaller profile size
 
     rm(data.interaction)
-
     return (FromAllPairwiseCorrelation(data.standard, pairwise.correlation))
   }
 }
@@ -130,9 +137,6 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   # identical(gene.symbol[ind.int.genes.in.std], int.genes.in.std) # sanity-check
   
   curr.ind <- 1 # Track the progress
-  
-  # For pairwise corr, the last one won't be there
-  # for (i in 1 : length(gene.symbol)-1){
   print('Mapping pairs against their correlation values ... ')
   
   # Progress bar
@@ -153,31 +157,12 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
     co.ann.values <- data.standard[ind.curr, 3]
     names(co.ann.values) <- std.second.genes
     
-    ## Get similarity data for the query gene (except self) (only standard need to be sorted)
-    # data.corr <- pairwise.correlation[, i]
-    # data.corr <- data.corr[-i]
-    
-    # sim.second.genes <- gene.symbol
-    # sim.second.genes <- sim.second.genes[-i]
-    
-    # Considering only Upper triangle (both datasets must be sorted)
+    # *** Considering only Upper triangle (both datasets must be sorted)
     data.corr <- pairwise.correlation[i, (i+1) :length.corr] # parentheses is important
     sim.second.genes <- gene.symbol[(i+1) : length.corr]
     
     # system.time(sim.second.genes <- gene.symbol[(i+1) : length.corr]) # Faster
     # system.time(sim.second.genes <- gene.symbol[-(1:i)])
-    
-    ## Should've taken care of NaN by now (but if still there - rare cases)
-    # Remove the nan correlation values and corresponding interactions
-    ind.nan <- which(is.nan(data.corr)) # Get the indices of NA's
-    if (length(ind.nan) > 0){
-      data.corr <- data.corr[-ind.nan]
-      sim.second.genes <- sim.second.genes[-ind.nan]
-    }
-    # or
-    # ind = which(!is.nan(data.corr))
-    # data.corr = data.corr[ind]
-    # sim_second_names.genes = sim_second_names.genes[ind]
     
     ## Assign the true lables (1,0) from the functional standard
     common.genes <- intersect(sim.second.genes, std.second.genes)
@@ -211,35 +196,35 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   }
   close(pb)
   
-  # Remove the unnecessary part of the data
+  ## Remove the unnecessary part of the data
   combined.true <- combined.true[1: (curr.ind - 1)]
   combined.score <- combined.score[1: (curr.ind - 1)]
   
+  ## Remove the na correlation values and corresponding interactions
+  ind.na <- which(is.na(combined.score) | is.nan(combined.score))
+  combined.score <- combined.score[-ind.na]
+  combined.true <- combined.true[-ind.na]
+    
   # If data.standard is of dimension 4 (contains ID information)
   if (dim(data.standard)[2] == 4){
     source <- source[1: (curr.ind - 1)]
     indices.in.standard <- indices.in.standard[1: (curr.ind - 1)]
+    
+    source <- source[-ind.na]
+    indices.in.standard <- indices.in.standard[-ind.na]
   }
   
-  # Returning as a list (we could do a data frame too!)
+  # Return outputs as a list
   if (dim(data.standard)[2] == 4){
     return(list(true = combined.true, predicted = combined.score, ID = source, index = indices.in.standard))  
   } else{
     return(list(true = combined.true, predicted = combined.score))
   }
-  
-  # Complex.Pairs <- CalculatePredictionAndTrueOnLibraryProfiles (data.standard, pairwise.correlation)
-  # data.frame(true = Complex.Pairs$true, predicted = Complex.Pairs$predicted, ID = Complex.Pairs$ID, indices = Complex.Pairs$index)
-  # as.data.frame(Complex.Pairs)
 }
 
 
 # Supporting function for CalculatePredictionAndTrueOnLibraryProfiles
 FromGenePairSimilarity <- function(data.standard, data.interaction){
-  
-  # print('speed optimizations ...')
-  # length.corr <- dim(pairwise.correlation)[1]
-  # gene.symbol <- rownames(pairwise.correlation)
   
   # Sort the co annotation data (data.standard)
   if (is.unsorted(data.standard$gene1)){
@@ -289,7 +274,6 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
     co.ann.values <- data.standard[ind.curr, 3]
     names(co.ann.values) <- std.second.genes
     
-    
     ## Get similarity data for all pairs of curr.unique.gene
     ind.sim <- gene.indices.sim[i,1] : gene.indices.sim[i,2]
     similarity.values <- data.interaction[ind.sim, 3] # parentheses is important
@@ -306,7 +290,6 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
     values.true <- co.ann.values[common.genes]
     values.predicted <- similarity.values[common.genes]
     
-    # ------- Here --------
     curr.size <- length(values.true)
     combined.true[curr.ind: (curr.ind + curr.size - 1)]  <-  values.true
     combined.score[curr.ind: (curr.ind + curr.size - 1)] <-  values.predicted
@@ -328,17 +311,25 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
   }
   close(pb)
   
-  # Remove the unnecessary part of the data
+  ## Remove the unnecessary part of the data
   combined.true <- combined.true[1: (curr.ind - 1)]
   combined.score <- combined.score[1: (curr.ind - 1)]
+  
+  ## Remove the na correlation values and corresponding interactions
+  ind.na <- which(is.na(combined.score) | is.nan(combined.score))
+  combined.score <- combined.score[-ind.na]
+  combined.true <- combined.true[-ind.na]
   
   # If data.standard is of dimension 4 (contains ID information)
   if (dim(data.standard)[2] == 4){
     source <- source[1: (curr.ind - 1)]
     indices.in.standard <- indices.in.standard[1: (curr.ind - 1)]
+    
+    source <- source[-ind.na]
+    indices.in.standard <- indices.in.standard[-ind.na]
   }
   
-  # Returning as a list (we could do a data frame too!)
+  # Returning as a list
   if (dim(data.standard)[2] == 4){
     return(list(true = combined.true, predicted = combined.score, ID = source, index = indices.in.standard))  
   } else{
@@ -363,7 +354,7 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
 #' 
 CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.interaction){
 
-  ## Subset the data using unique queries 
+  ## Subset the data using unique query genes (if not already provided) 
   queries <- unlist( lapply( strsplit(colnames(data.interaction), '_'), '[[', 1) ) # Get the first element of the list (strings separated by '_')
   queries_unique <- unique(queries)
 
@@ -375,9 +366,6 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   colnames(data.interaction) <- queries # queries.original[indices]
   queries.full <- queries.original[indices] # Complete names of the query
 
-  # ** TODO: Take the aggregate of the replicates, keep options for best or mean of replicates
-
-  
   ## PR Curve for each query screen (using numeric interaction data)
   combined.true.neg <- c()
   combined.score.neg <- c()
@@ -393,7 +381,8 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
     data.standard <- data.standard[ind,]
   }
   
-  system.time(out <- GroupUniqueElements(data.standard$gene1))
+  # system.time(out <- GroupUniqueElements(data.standard$gene1))
+  out <- GroupUniqueElements(data.standard$gene1)
   indices.genes1 <- out 
   unique.genes1 <- row.names(out)
   
@@ -401,7 +390,7 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   ind <- order(data.standard$gene2)
   data.standard.tmp <- data.standard[ind,]
   
-  system.time(out <- GroupUniqueElements(data.standard.tmp$gene2))
+  out <- GroupUniqueElements(data.standard.tmp$gene2)
   indices.genes2 <- out 
   unique.genes2 <- row.names(out)
   
@@ -415,13 +404,12 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
     
     curr.ind <- curr.ind + 1
     
-    # If the query is absent from the standard, skip
-    if (!(is.element(query.cand, unique.genes1) | is.element(query.cand, unique.genes2))) {
-      # print('ABSENT')
+    # If the query is absent from the standard, skip it
+    if (!(is.element(query.cand, unique.genes1) | is.element(query.cand, unique.genes2))){
       next
     }
     else{ # Get the standard data for this query Gene
-      print(query.cand)
+      # print(query.cand)
       
       func.inter.genes <- c()
       func.inter.values <- c()
@@ -443,11 +431,6 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
       names(func.inter.values) <- func.inter.genes
       GI_ones <- c(GI_ones, sum(func.inter.values == 1))
     }
-    
-    # shouldn't be necessary
-    # if (isempty(func_inter_genes)){ # Screen Name is not inside the data.
-    #  next
-    #}
     
     genetic.inter.values <- data.interaction[,query.cand] # Single column
     names(genetic.inter.values) <- row.names(data.interaction)
@@ -491,9 +474,14 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   }
   close(pb)
   
-  ## Combined GI (Pos,Neg) - Combine interactions from all screens in a single plot (Order one last time)
+  ## Remove NaN from the data
+  ind.nan <- which(is.na(combined.score) | is.nan(combined.score))
+  combined.score.neg <- combined.score.neg[-ind.nan]
+  combined.true.neg = combined.true.neg[-ind.nan]
+  
+  ## Order from negative to positive score
   tmpInd = order(combined.score.neg)
-  combined.true.neg = combined.true.neg[tmpInd]
+  combined.score.neg <- combined.score.neg[tmpInd]
   combined.score.neg = combined.score.neg[tmpInd]
   combined.neg = data.frame(True = combined.true.neg, Score = combined.score.neg)
   
