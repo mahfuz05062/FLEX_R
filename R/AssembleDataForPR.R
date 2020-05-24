@@ -202,16 +202,20 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   
   ## Remove the na correlation values and corresponding interactions
   ind.na <- which(is.na(combined.score) | is.nan(combined.score))
-  combined.score <- combined.score[-ind.na]
-  combined.true <- combined.true[-ind.na]
-    
+  if (length(ind.na) > 0){
+    combined.score <- combined.score[-ind.na]
+    combined.true <- combined.true[-ind.na]  
+  }
+  
   # If data.standard is of dimension 4 (contains ID information)
   if (dim(data.standard)[2] == 4){
     source <- source[1: (curr.ind - 1)]
     indices.in.standard <- indices.in.standard[1: (curr.ind - 1)]
     
-    source <- source[-ind.na]
-    indices.in.standard <- indices.in.standard[-ind.na]
+    if (length(ind.na) > 0){
+      source <- source[-ind.na]
+      indices.in.standard <- indices.in.standard[-ind.na]
+    }
   }
   
   # Return outputs as a list
@@ -317,16 +321,20 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
   
   ## Remove the na correlation values and corresponding interactions
   ind.na <- which(is.na(combined.score) | is.nan(combined.score))
-  combined.score <- combined.score[-ind.na]
-  combined.true <- combined.true[-ind.na]
+  if (length(ind.na) > 0){
+    combined.score <- combined.score[-ind.na]
+    combined.true <- combined.true[-ind.na]  
+  }
   
   # If data.standard is of dimension 4 (contains ID information)
   if (dim(data.standard)[2] == 4){
     source <- source[1: (curr.ind - 1)]
     indices.in.standard <- indices.in.standard[1: (curr.ind - 1)]
     
-    source <- source[-ind.na]
-    indices.in.standard <- indices.in.standard[-ind.na]
+    if (length(ind.na) > 0){
+      source <- source[-ind.na]
+      indices.in.standard <- indices.in.standard[-ind.na]
+    }
   }
   
   # Returning as a list
@@ -355,7 +363,7 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
 CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.interaction){
 
   ## Subset the data using unique query genes (if not already provided) 
-  queries <- unlist( lapply( strsplit(colnames(data.interaction), '_'), '[[', 1) ) # Get the first element of the list (strings separated by '_')
+  queries <- unlist(lapply(strsplit(colnames(data.interaction), '_'), '[[', 1) ) # Get the first element of the list (strings separated by '_')
   queries_unique <- unique(queries)
 
   # If there are multiple replicates, we are taking the first unique one  
@@ -475,9 +483,11 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   close(pb)
   
   ## Remove NaN from the data
-  ind.nan <- which(is.na(combined.score.neg) | is.nan(combined.score.neg))
-  combined.score.neg <- combined.score.neg[-ind.nan]
-  combined.true.neg = combined.true.neg[-ind.nan]
+  ind.na <- which(is.na(combined.score.neg) | is.nan(combined.score.neg))
+  if (length(ind.nan) > 0)
+    combined.score.neg <- combined.score.neg[-ind.na]
+    combined.true.neg = combined.true.neg[-ind.na]
+  end
   
   ## Order from negative to positive score
   tmpInd = order(combined.score.neg)
