@@ -484,10 +484,10 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   
   ## Remove NaN from the data
   ind.na <- which(is.na(combined.score.neg) | is.nan(combined.score.neg))
-  if (length(ind.nan) > 0)
+  if (length(ind.na) > 0){
     combined.score.neg <- combined.score.neg[-ind.na]
     combined.true.neg = combined.true.neg[-ind.na]
-  end
+  }
   
   ## Order from negative to positive score
   tmpInd = order(combined.score.neg)
