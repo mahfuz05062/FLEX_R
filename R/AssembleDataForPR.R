@@ -475,7 +475,7 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   close(pb)
   
   ## Remove NaN from the data
-  ind.nan <- which(is.na(combined.score) | is.nan(combined.score))
+  ind.nan <- which(is.na(combined.score.neg) | is.nan(combined.score.neg))
   combined.score.neg <- combined.score.neg[-ind.nan]
   combined.true.neg = combined.true.neg[-ind.nan]
   
