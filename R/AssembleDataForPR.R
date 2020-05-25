@@ -486,13 +486,13 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   ind.na <- which(is.na(combined.score.neg) | is.nan(combined.score.neg))
   if (length(ind.na) > 0){
     combined.score.neg <- combined.score.neg[-ind.na]
-    combined.true.neg = combined.true.neg[-ind.na]
+    combined.true.neg <- combined.true.neg[-ind.na]
   }
   
   ## Order from negative to positive score
   tmpInd = order(combined.score.neg)
   combined.score.neg <- combined.score.neg[tmpInd]
-  combined.score.neg = combined.score.neg[tmpInd]
+  combined.true.neg <- combined.true.neg[tmpInd]
   combined.neg = data.frame(True = combined.true.neg, Score = combined.score.neg)
   
   ## Sort by Query Names

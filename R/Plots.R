@@ -237,12 +237,12 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
                          save.figure = FALSE) {
   
   ## *** Calculate the PR data to plot for positive and negative interactions
-  score.pos.int <- plot.data$data$Score #[plot.data$data$Score > 0]
-  true.pos.int <- plot.data$data$True   #[plot.data$data$Score > 0]
+  score.pos.int <- plot.data$data$Score [plot.data$data$Score > 0]
+  true.pos.int <- plot.data$data$True  [plot.data$data$Score > 0]
   pos.PR <- GenerateDataForPerfCurve(value.predicted = score.pos.int, value.true = true.pos.int, x.axis = 'TP', y.axis = 'precision', neg.to.pos = FALSE)
   
-  score.neg.int <- plot.data$data$Score #[plot.data$data$Score < 0]
-  true.neg.int <- plot.data$data$True   #[plot.data$data$Score < 0]
+  score.neg.int <- plot.data$data$Score [plot.data$data$Score < 0]
+  true.neg.int <- plot.data$data$True [plot.data$data$Score < 0]
   neg.PR <- GenerateDataForPerfCurve(value.predicted = score.neg.int, value.true = true.neg.int, x.axis = 'TP', y.axis = 'precision', neg.to.pos = TRUE)
   
   # pred.ca <- list(positive = list(true = true.pos.int, predicted = score.pos.int))
