@@ -54,11 +54,11 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
       print('ill-formatted data .. quitting ...')
       return(NULL)
     }
-  } 
-  
-  # 2. Pairwise correlation / similarity data provided as a square matrix
-  else if ( (dim(data.interaction)[1] == dim(data.interaction)[2]) & 
-       isSymmetric(as.matrix(data.interaction)) ) {
+    
+  } else if ( (dim(data.interaction)[1] == dim(data.interaction)[2]) & 
+       isSymmetric(as.matrix(data.interaction)) ) { 
+    # 2. Pairwise correlation / similarity data provided as a square matrix
+    
     # Check: 1. Square, 2. Symmetric
     print('Pairwise correlation/similarity matrix provided ...')
     
@@ -74,10 +74,9 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     gc()
     
     return (FromAllPairwiseCorrelation(data.standard, pairwise.correlation))
-  } 
-  
-  # 3. Genes (row) * screens (column) matrix provided (GI or fitness, for example)
-  else{ 
+    
+  } else{ 
+    # 3. Genes (row) * screens (column) matrix provided (GI or fitness, for example)
     # Calculate pairwise.correlation
     
     # Sort the interaction.data by gene names (library side)
@@ -94,7 +93,11 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     percent.nan <- sum(is.nan(as.matrix(data.interaction))) / (dim(data.interaction)[1] * dim(data.interaction)[2])
     
     if (percent.nan > 0.1){ # If we have more than 20% NaNs in the data
-      pairwise.correlation <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson') # Slow, and 
+      pairwise.correlation <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson') # Slow, and really unstable (for sparse data)
+      
+      ## *** TODO: Use inner product
+      # pairwise.correlation <- (as.matrix(data.interaction)) %*% t(as.matrix(data.interaction)) # Found all to be NaN!!!
+      
     }else{
       pairwise.correlation <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson') # Fast  
     }
@@ -220,7 +223,7 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   
   # Return outputs as a list
   if (dim(data.standard)[2] == 4){
-    return(list(true = combined.true, predicted = combined.score, ID = source, index = indices.in.standard))  
+    return(list(true = combined.true, predicted = combined.score, ID = source, index = indices.in.standard))
   } else{
     return(list(true = combined.true, predicted = combined.score))
   }
