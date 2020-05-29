@@ -34,12 +34,15 @@
 
 CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.interaction){
   ## *** Check input data format
-  true_classes_count <- (class(data.standard) == 'data.frame') + (class(data.interaction) == 'data.frame')
+  true_classes_count <- (class(data.standard) == 'data.frame') + (class(data.interaction) == 'data.frame' | class(data.interaction) == 'matrix')
   if(true_classes_count < 2){
     stop ("Check the inputs again ... they are supposed to be data.frame's")
     # stopifnot(true_classes_count < 3)
     # print ("Check the inputs again ... they are supposed to be data.frame's")
     # return (NULL)
+  }
+  if (is.null(row.names(data.interaction))){
+    stop ("data.interaction does not contain gene names as row names ...")
   }
   
   # 1. Pairwise data in the format of Gene1 Gene2 Similarity
