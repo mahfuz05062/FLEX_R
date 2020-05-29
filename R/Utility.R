@@ -100,7 +100,7 @@ GetCoAnnotationData <- function(filename, delim = '\t'){
 #' Read the DepMap data and convert it to a gene by screen format
 #'
 #' @param filename Name/location of the input depmap file.
-#' @param delim: Delimiter used to separate columns (',' is the default as it's usually used in depmap files)
+#' @param delim: Delimiter used to separate columns (',' is the default: usually used in depmap scores)
 #' 
 #' @return a data.frame in the format of genes (row) * screens (columns)
 #' 
@@ -125,11 +125,9 @@ ReformatDepMapData <- function(filename, delim = ','){
   # Way 2: Read the data again (it will be numeric only now)
   data.interaction <- read.table(filename, header = T, sep = ',', stringsAsFactors = F, row.names = 1)
   data.interaction.final <- t(data.interaction)
-  row.names(data.interaction.final) <- genes
+  row.names(data.interaction.final) <- genes  
   
-  data.interaction <- data.interaction.final
-  
-  return(data.interaction)
+  return(as.data.frame(data.interaction.final))
 }
 
 
