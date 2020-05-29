@@ -125,9 +125,18 @@ ReformatDepMapData <- function(filename, delim = ','){
   # Way 2: Read the data again (it will be numeric only now)
   data.interaction <- read.table(filename, header = T, sep = ',', stringsAsFactors = F, row.names = 1)
   data.interaction.final <- t(data.interaction)
-  row.names(data.interaction.final) <- genes  
+  row.names(data.interaction.final) <- genes
   
-  return(as.data.frame(data.interaction.final))
+  # Sort the data by gene names
+  data.interaction <- as.data.frame(data.interaction.final)
+  names.genes <- row.names(data.interaction)
+  
+  if (is.unsorted(names.genes)){
+    ind <- order(names.genes)
+    data.interaction <- data.interaction[ind,]
+  }
+  
+  return(data.interaction)
 }
 
 
