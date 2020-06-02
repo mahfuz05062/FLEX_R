@@ -4,6 +4,7 @@ Description: A set of tools to explore functional information and bias in genome
 Version: 1.0.0
 Author: Mahfuzur Rahman <rahma118@umn.edu>
 Maintainer: Mahfuzur Rahman <rahma118@umn.edu>
+biocViews:
 Depends: R (>= 3.4.3), org.Hs.eg.db
 Encoding: UTF-8
 Imports: 
