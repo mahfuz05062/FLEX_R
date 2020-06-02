@@ -5,12 +5,12 @@ Version: 1.0.0
 Author: Mahfuzur Rahman <rahma118@umn.edu>
 Maintainer: Mahfuzur Rahman <rahma118@umn.edu>
 Depends: R (>= 3.4.3)
-Imports: 
+Imports: org.Hs.eg.db
 Suggests: knitr, rmarkdown
-biocViews: org.Hs.eg.db
-Encoding: UTF-8
 LazyData: true
 VignetteBuilder: knitr
+Encoding: UTF-8
+git_url: https://git.bioconductor.org/packages/bioCancer
 License: GPL-3
 Packaged: 2020-02-19 10:00 CST; ubuntu
 RoxygenNote: 7.1.0

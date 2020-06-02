@@ -157,7 +157,9 @@ MakeCoAnnotationFromGeneSymbols <- function(data_standard, overlap_length = 1, s
 #'  gene1: Name of the first gene in the gene pair
 #'  gene2: Name of the second gene in the gene pairs
 #'  is_annotated: 0/1 value (Are the gene pairs functionally related)
-#'  
+#' 
+#' @import org.Hs.eg.db
+#' 
 #' @export
 #'  
 MakeFuncNetFromGIANT <- function(file_location = NULL){
@@ -172,7 +174,7 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
    # Read the downloaded data
    data.GIANT.entrez <- read.table(file_location,  header = F, sep = '\t', quote = '', stringsAsFactors = F)
 
-   ## @import org.Hs.eg.db # Don't know how import works!
+   ## @importFrom org.Hs.eg.db org.Hs.egSYMBOL
   
   ## --------------------------------------------------
   # Use an entrez to gene symbol mapping to convert this standard (in Entrez) to usable with FLEX (in Symbol)

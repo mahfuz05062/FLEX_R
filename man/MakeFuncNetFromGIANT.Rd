@@ -7,8 +7,7 @@
 MakeFuncNetFromGIANT(file_location = NULL)
 }
 \arguments{
-\item{file_location}{The location to save the network. If ther file is there, this 
-will return the data. Otherwise, it will download, process and then return the data.}
+\item{file_location}{The location save the input GIANT file. If it is not there, it will be downloaded.}
 }
 \value{
 a data frame for co-annotations of gene pairs
