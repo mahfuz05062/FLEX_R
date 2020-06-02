@@ -182,8 +182,8 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
   genes.entrez.str <- sapply(genes.entrezID, toString) # as.character(genes.entrezID)
   
   # https://stuff.mit.edu/afs/athena/software/r/current/arch/i386_linux26/lib/R/library/org.Hs.eg.db/html/org.Hs.egSYMBOL.html  
-  x <- org.Hs.egSYMBOL
-  mapped_genes <- mappedkeys(x)
+  x <- org.Hs.eg.db::org.Hs.egSYMBOL
+  mapped_genes <- AnnotationDbi::mappedkeys(x)
   xx <- as.list(x[mapped_genes])
   
   # *** The rownames are entrez IDs and the values are gene symbols

@@ -5,7 +5,9 @@ Version: 1.0.0
 Author: Mahfuzur Rahman <rahma118@umn.edu>
 Maintainer: Mahfuzur Rahman <rahma118@umn.edu>
 Depends: R (>= 3.4.3)
-Imports: org.Hs.eg.db
+Imports: 
+    org.Hs.eg.db,
+    AnnotationDbi
 Suggests: knitr, rmarkdown
 LazyData: true
 VignetteBuilder: knitr
