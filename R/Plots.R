@@ -217,7 +217,6 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
 }
 
 
-
 #' Plot performance curves on direct interactions (Negative vs Positive)
 #'
 #' @param plot.data a list of two lists names x and y (gives the data on x and y axis)
@@ -588,98 +587,105 @@ PlotContributionStructure <- function(plot.data, cutoff.all, min.pairs = 10,
 
 
 
-#' #' Plot Category level PR Curve
-#' #'
-#' #' @param Pairs.in.data Identity of each entity ('ID'), 'Name', Genes insdie ('Gene'), 'Length'
-#' #' @param cutoff.all Precision cutoffs the user is interested in.
-#' #' @param summary.standard Summary of the standard used: includes ID, Name, Genes, and Length
-#' #'
-#' #' @return output.stepwise.contribution -> Stepwise contribution matrix
-#' #' This is a entity ID * cutoff data.frame (with an extra column added for entity Name)
-#' #' 
-#' #'  
-#' 
-#' ## Category PR Curve
-#' cTP_func <- function(data, anno, complexes, 
-#'                      percent_th = 0.05, tp_th = 1, excludeBG = T, out_TP = T) { # account for larger complexes
-#'   
-#'   x <- which(anno %in% names(complexes) == F) # replace modified names
-#'   for(i in x) {
-#'     anno[i] <- substr(anno[[i]], 1, nchar(anno[[i]]) - 2)
-#'   }
-#'   
-#'   x <- data
-#'   for(i in 1:dim(data)[1]) {
-#'     print(data[i,])
-#'     print(choose(length(complexes[[anno[[i]]]]), 2))
-#'     x[i,] <- data[i,] / choose(length(complexes[[anno[[i]]]]), 2)
-#'   }
-#'   
-#'   x <- c(apply(data >= tp_th & x > percent_th, 2, sum), 1)
-#'   
-#'   if(out_TP == FALSE) {
-#'     x <- x / max(x) #recall
-#'   }
-#'   
-#'   if(excludeBG) {
-#'     x <- x[-which(x == max(x))]
-#'   }
-#'   
-#'   x
-#' }
-#' 
-#' 
-#' 
-#' #' Separate the contribution of signal into individual entries (a complex, pathway, GO Biological Process etc.)
-#' #'
-#' #' @param Pairs.in.data Identity of each entity ('ID'), 'Name', Genes insdie ('Gene'), 'Length'
-#' #' @param cutoff.all Precision cutoffs the user is interested in.
-#' #' @param summary.standard Summary of the standard used: includes ID, Name, Genes, and Length
-#' #'
-#' #' @return output.stepwise.contribution -> Stepwise contribution matrix
-#' #' This is a entity ID * cutoff data.frame (with an extra column added for entity Name)
-#' #' 
-#' #'  
-#' PlotCategoryPR <- function(data_complex, pr_contri, pr_contri_noETC, pr_contri_noAUChi){
-#'   # Remove complexes (say top complex, top 3, top 5, top 10 etc.) and generate the curve shown on the picture
-#'   
-#'   coreComplex_members <- strsplit(data_complex$Genes, "[;]") # ';' would work just fine
-#'   names(coreComplex_members) <- data_complex$Name
-#'   
-#'   ## Stepwise contribution (Data inside Vignette directory)
-#'   pr_contri <- read.table('Contribution_of_complexes_stepwise_olf4.txt', stringsAsFactors=FALSE, sep = "\t", header = T)
-#'   pr_contri_anno <- pr_contri$Name
-#'   pr_contri <- pr_contri[,-1]
-#'   
-#'   pr_contri_noETC <- read.table("Contribution_of_complexes_stepwise_19Q2_ETC1_mtRibo_ETCV_removal.txt", stringsAsFactors=FALSE, sep = "\t", header = T)
-#'   pr_contri_anno_noETC <- pr_contri_noETC$Name
-#'   pr_contri_noETC <- pr_contri_noETC[,-1]
-#'   
-#'   pr_contri_noAUChi <- read.table("Contribution_of_complexes_stepwise_19Q2_low_size_high_AUC_removal.txt", stringsAsFactors=FALSE, sep = "\t", header = T)
-#'   pr_contri_anno_noAUChi <- pr_contri_noAUChi$Name
-#'   pr_contri_noAUChi <- pr_contri_noAUChi[,-1]
-#'   
-#'   ### get TP for entire data
-#'   y <- c(seq(.1,1,0.025), 1)
-#'   
-#'   ## Normal one
-#'   x <- cTP_func(data = pr_contri, anno = pr_contri_anno, 
-#'                 complexes = coreComplex_members, percent_th = .3)
-#'   
-#'   ## no ETC, 55S
-#'   x1 <- cTP_func(data = pr_contri_noETC, anno = pr_contri_anno_noETC, 
-#'                  complexes = coreComplex_members, percent_th = .3)
-#'   
-#'   ## high performance
-#'   x2 <- cTP_func(data = pr_contri_noAUChi, anno = pr_contri_anno_noAUChi, 
-#'                  complexes = coreComplex_members, percent_th = .3)
-#'   
-#'   
-#'   pdf(file = "graphs/pr_categoryTP_log10x.pdf", width = 2.5, height = 3, useDingbats = F)
-#'   plot(x, y, xlab = "category TP", ylab = "precision", bty = "n", las=1, ylim = c(0,max(y)), pch = 16, type = "l", log = "x") # This one works!
-#'   lines(x1, y, col = "red")
-#'   lines(x2, y, col = "green")
-#'   dev.off()
-#' }
+#' Plot Category level PR Curve
+#'
+#' @param data Stepwise Contribution (numeric) for each complexes
+#' @param anno Annotation (names) of the complexes in data
+#' @param percent_th Normalized (by number of pairs) contribution for a complex to be considered as covered
+#' @param tp_th Minimum number of TPs for a complex to be considered as covered
+#' @param excludeBG
+#' @param out_TP
+#'
+#' @return output.stepwise.contribution -> Stepwise contribution matrix
+#' This is a entity ID * cutoff data.frame (with an extra column added for entity Name)
+#'
+
+## Category PR Curve
+cTP_func <- function(data, anno, complexes,
+                     percent_th = 0.05, tp_th = 1, excludeBG = T, out_TP = T) {
+
+  #x <- cTP_func(data = pr_contri, anno = pr_contri_anno,
+  #              complexes = coreComplex_members, percent_th = .3)
+  
+  # Replace modified names (for duplicate names that were modified before!)
+  # Shouldn't happen anymore as we are removing the duplicates? But should we go back and modify the same name complexes?
+  x <- which(anno %in% names(complexes) == F) 
+  for(i in x) {
+    anno[i] <- substr(anno[[i]], 1, nchar(anno[[i]]) - 2)
+  }
+
+  x <- data # Stepwise contribution per precision
+  for(i in 1:dim(data)[1]) {
+    print(data[i,])
+    print(choose(length(complexes[[anno[[i]]]]), 2))
+    
+    # Normalizing complex contribution by number of pairs
+    x[i,] <- data[i,] / choose(length(complexes[[anno[[i]]]]), 2) 
+  }
+
+  x <- c(apply(data >= tp_th & x > percent_th, 2, sum), 1)
+
+  if(out_TP == FALSE) {
+    x <- x / max(x) #recall
+  }
+
+  if(excludeBG) {
+    x <- x[-which(x == max(x))]
+  }
+
+  x
+}
+
+
+#' Separate the contribution of signal into individual entries (a complex, pathway, GO Biological Process etc.)
+#'
+#' @param data_complex Original input for the co-annotation standard
+#' @param pr.stepwise Stepwise Contribution (TP) per complex at different precisions
+#' @param ccol colors for each of the PR curves
+#' @param save.figure set to TRUE to save the figure (fig.title is used as the name)
+#' @param outfile.name the name of the output file(figure)
+#' @param outfile.type type of figure to save - 'pdf' (default) or 'png'
+#'
+#' @return output.stepwise.contribution -> Stepwise contribution matrix
+#' This is a entity ID * cutoff data.frame (with an extra column added for entity Name)
+PlotCategoryPR <- function(data_complex, pr.stepwise, ccol = NULL, save.figure = FALSE, outfile.name = 'test_category_PR', outfile.type = 'pdf'){
+  
+  # Remove complexes (say top complex, top 3, top 5, top 10 etc.) and generate the curve shown on the picture
+  coreComplex_members <- strsplit(data_complex$Genes, "[;]") # ';' would work just fine
+  names(coreComplex_members) <- data_complex$Name
+  
+  # Save figure?
+  if (save.figure){
+    if(outfile.type == 'png'){
+      png(paste0(outfile.name, ".png"), width = 2.5, height = 3, units="in", res = 300)
+    }else{
+      pdf(file = paste0(outfile.name, ".pdf"), width = 2.5, height = 3, useDingbats = F)
+    }
+  }
+  
+  for (i in 1 : length(pr.stepwise)) {
+    
+    pr_contri = pr.stepwise[[i]]$data
+    y <- pr.stepwise[[i]]$cutoffs
+    
+    pr_contri_anno <- pr_contri$Name
+    pr_contri <- pr_contri[,-1]
+    
+    x <- cTP_func(data = pr_contri, anno = pr_contri_anno,
+                  complexes = coreComplex_members, percent_th = .3)
+    
+    if (i == 1){
+      plot(x, y, xlab = "category TP", ylab = "precision", bty = "n", las=1, ylim = c(0,max(y)), pch = 16, type = "l", log = "x", col = ccol[i])
+      
+    }else{
+      lines(x, y, col = ccol[i])
+    }
+  }
+
+  if (save.figure){
+    dev.off()
+  }
+  
+}
 
 

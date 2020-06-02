@@ -5,20 +5,17 @@
 ## Load necessary fiels
 
 # Way 1: Source the necessary files directly
-
 # only works when we source this file
 # test.dir <- dirname(sys.frame(1)$ofile)
 # src.dir <- gsub('tests', 'R', test.dir)
 # setwd(src.dir)
 # setwd(test.dir)
 
-
 # This directories are subject to change
-setwd('/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/FLEX/R')
-
+setwd('/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/FLEX_R/R')
 source('Utility.R')
 source('GoldStandards.R')
-source('AsembleDataForPR.R')
+source('AssembleDataForPR.R')
 source('PerfCurve.R')
 source('PostProcessing.R')
 source('Plots.R')
@@ -26,8 +23,9 @@ source('Plots.R')
 setwd('/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/FLEX/tests')
 
 # Way 2 (use devtools to source R files from FLEX)
-# require('devtools')
-# load_all('/home/mahfuz/Desktop/CRISPR/FLEX/R/FLEX/R') # Needs 'devtools'
+require('devtools')
+# load_all('/home/mahfuz/Desktop/CRISPR/FLEX/R/FLEX_R')
+load_all('/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/FLEX_R/R')
 
 # Way 3: load the FLEX library
 # install('FLEX') # From the directory where it resides
@@ -42,7 +40,7 @@ setwd('/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/FLEX/tests')
 # ---------------------------------------------
 # 1. Read in the data included with the package
 # ---------------------------------------------
-data('data_complex', package = 'FLEX') # data('data_pathway', package = 'FLEX')
+data('data_complex', package = 'FLEX')
 
 # or load it directly
 # setwd('/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/FLEX/data/')
@@ -51,9 +49,8 @@ data('data_complex', package = 'FLEX') # data('data_pathway', package = 'FLEX')
 # ---------------------------------------------
 # 2. Create (or read) the co-annotation data
 # ---------------------------------------------
-
 file_name <- '/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/CORUM_CA.Rdata'
-# file_name <- '/home/mahfuz/Desktop/CRISPR/FLEX/R/Tests/Package_Test/CORUM_CA.Rdata'
+file_name <- '/home/mahfuz/Desktop/CRISPR/FLEX/R/Tests/Package_Test/CORUM_CA.Rdata'
 data.ca <- MakeCoAnnotationFromGeneSymbols(data_standard = data_complex, 
                                            overlap_length = 1, 
                                            file_location = file_name)
@@ -197,20 +194,26 @@ pred.ca <- append(pred.ca, list(out_cmplx_rem_10 = list(true = entity.matrix.top
 PlotPRSimilarity (pred.ca, fig.title = 'Complex Removal Comparison', fig.labs = c('TP', 'Precision'), legend.names = c('Original', '55S_removed'), legend.color = c('#de2d26', '#3182bd'), save.figure = FALSE)
 
 
+# ---------------------------------------------
+#  9. Category Plot
+# ---------------------------------------------
+setwd('/home/mahfuz/Desktop/CRISPR/FLEX/R/Tests/Package_Test/Vignette_test')
 
+## Stepwise contribution (Data inside Vignette directory)
+pr_contri <- read.table('Contribution_of_complexes_stepwise_19Q2.txt', stringsAsFactors=FALSE, sep = "\t", header = T)
+pr_contri_noETC <- read.table("Contribution_of_complexes_stepwise_19Q2_ETC1_mtRibo_ETCV_removal.txt", stringsAsFactors=FALSE, sep = "\t", header = T)
+pr_contri_noAUChi <- read.table("Contribution_of_complexes_stepwise_19Q2_low_size_high_AUC_removal.txt", stringsAsFactors=FALSE, sep = "\t", header = T)
 
+# The second parameter should match up with the precision values used to generate pr_contri
+pr.stepwise <- list(first = list(data = pr_contri, cutoffs = c(seq(.1,1,0.025), 1)))
+pr.stepwise <- append(pr.stepwise, list(second = list(data = pr_contri_noETC, cutoffs = c(seq(.1,1,0.025), 1))))
+pr.stepwise <- append(pr.stepwise, list(third = list(data = pr_contri_noAUChi, cutoffs = c(seq(.1,1,0.025), 1))))
 
-
-
+PlotCategoryPR(data_complex, pr.stepwise, ccol = c('black', 'red', 'green'))
 
 
 ## Following analysis are for testing the package
 if (FALSE){
-  # ---------------------------------------------
-  #  9. Category Plot
-  # ---------------------------------------------
-  
-  
   ## =========================== ##
   #  Direct Interaction 
   ## =========================== ##
@@ -275,7 +278,6 @@ if (FALSE){
   
   PlotPRSimilarity (pred.ca = pred.ca, neg.to.pos = TRUE, fig.title = fig.title, legend.names = legend.names, legend.color = legend.col.neg, save.figure = FALSE, is.bgdline = TRUE)
 }
-
 
 
 if (FALSE){

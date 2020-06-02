@@ -4,7 +4,7 @@
 
 require(devtools)
 # load_all('/home/mahfuz/Desktop/CRISPR/FLEX/R/FLEX/') # Roughly simulates library('FLEX')
-load_all('/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/FLEX/') 
+load_all('/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/FLEX_R/')
 
 # scp rahma118@mcclintock.cs.umn.edu:/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/FLEX/R/*.R /home/mahfuz/Desktop/CRISPR/FLEX/R/FLEX/R/
 # scp /home/mahfuz/Desktop/CRISPR/FLEX/R/FLEX/R/*.R rahma118@mcclintock.cs.umn.edu:/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/FLEX/R/FLEX/R/ 
