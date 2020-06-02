@@ -158,7 +158,8 @@ MakeCoAnnotationFromGeneSymbols <- function(data_standard, overlap_length = 1, s
 #'  gene2: Name of the second gene in the gene pairs
 #'  is_annotated: 0/1 value (Are the gene pairs functionally related)
 #' 
-#' @import org.Hs.eg.db
+#' @importFrom org.Hs.eg.db org.Hs.egSYMBOL
+#' @importFrom AnnotationDbi mappedkeys
 #' 
 #' @export
 #'  
