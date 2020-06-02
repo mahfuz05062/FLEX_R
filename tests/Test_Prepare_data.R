@@ -38,6 +38,12 @@ filename.GO.BP <- '/project/chadm/Mahfuz/Database/Custom/GO/GOIDs_TKOv3_DepMap_1
 data_GO_BP <- read.table(filename.GO.BP, header = T, sep = '\t', quote = '', stringsAsFactors = F)
 save(data_GO_BP, file = 'data_GO_BP.rda')
 
+
+## 5. Download data for Functional network (GIANT)
+#  See 'MakeFuncNetFromGIANT' in GoldStandards.R
+
+
+
 ## ============================ ##
 ## Miscellaneous
 ## ============================ ##

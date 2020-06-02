@@ -129,7 +129,7 @@ MakeCoAnnotationFromGeneSymbols <- function(data_standard, overlap_length = 1, s
                                    stringsAsFactors = FALSE) # stringAsFactors is super important here
   data_co_annotation$is_annotated[data_co_annotation$is_annotated < overlap_length] <- 0
   data_co_annotation$is_annotated[data_co_annotation$is_annotated >= overlap_length] <- 1
-
+  
   # If the direcotry itself doesn't exist, we still return the output
   if (!is.null(file_location)){
     result = tryCatch(save(data_co_annotation, file = file_location), 
@@ -149,38 +149,120 @@ MakeCoAnnotationFromGeneSymbols <- function(data_standard, overlap_length = 1, s
 
 
 
-## ====================== This part is Work in Progress (and thus commented out) ====================== ##
-# Create a co-annotation standard for gene pairs from given gene memberships into Gene Ontology (GO) Biological Processes (BP).
-# 
-# @param data_standard the functional standard as a data.frame ($ID, $Name, $Genes as columns)
-# @param overlap_length Number of common annotations to a complex/pathway to qualify as a co-annoation; for GO, we need a range. The default minimum is 10 and maximum is 300.
-# @return a data frame for co-annotations of gene pairs
-#  gene1: combined.true: true co-ann values (from the standard 0/1) for pairs
-#  gene2: combined.score: predicted scores (according to similarity) for pairs
-#  is_annotated: 0/1 value (Are the gene pairs co-annotated to the standard)
-#  ID: Source(s) of the co-annotation
-#  
-#  @examples 
-#  
-# MakeCoAnnotationForGOBP <- function(data_standard, overlap_length = c(10, 300)){
-# 
-#   ## Which packages would be the best suited for this?
-#   # topGO or GO.db or biomaRt?
-#   
-#   ## GO.db Package (issue: this package doesn't give us associations)
-#   # The purpose of this package is to provide detailed
-#   # information about the latest version of the Gene Ontologies. This package is updated biannually.
-#   # https://bioconductor.org/packages/release/data/annotation/manuals/GO.db/man/GO.db.pdf
-#   install.packages('GO.db') 
-#   
-#   # Use select() # ?select
-#   
-#   # GOBPANCESTOR Annotation of GO Identifiers to their Biological Process Ancestors
-#   # The format is an R object mapping the GO BP terms to all ancestor terms, where an ancestor term
-#   # is a more general GO term that precedes the given GO term in the DAG (in other words, the parents,
-#   #                                                                      and all their parents, etc.)
-#   # xx <- as.list(GOBPANCESTOR)
-#   # GOBPCHILDREN, GOBPOFFSPRING, GOBPPARENTS (and similar for CC, and MFs)
-#   
-#   
-# }
+#' Download the GIANT functional network and process it to use for FLEX
+#' 
+#' @param file_location The location to save the network. If ther file is there, this 
+#' will return the data. Otherwise, it will download, process and then return the data.
+#'
+#' @return a data frame for co-annotations of gene pairs
+#'  gene1: Name of the first gene in the gene pair
+#'  gene2: Name of the second gene in the gene pairs
+#'  is_annotated: 0/1 value (Are the gene pairs functionally related)
+#'  
+#' @export
+#'  
+MakeFuncNetFromGIANT <- function(file_location = NULL){
+  # file_location <- '/home/mahfuz/Desktop/CRISPR/FLEX/R/Tests/Package_Test/Vignette_test/global_standard.txt'
+  
+  if (!file.exists(file_location)){
+    download.file(url='http://giant.princeton.edu/static/standards/global_standard.dat', 
+                  destfile = file_location, method='curl')
+    
+    # Read the downloaded data
+    data.GIANT.entrez <- read.table(file_location,  header = F, sep = '\t', quote = '', stringsAsFactors = F)
+  } else{
+    
+  }
+  
+  ## --------------------------------------------------
+  # Use an entrez to gene symbol mapping to convert this standard (in Entrez) to usable with FLEX (in Symbol)
+  genes.entrezID <- sort(unique(union(data.GIANT.entrez[,1], data.GIANT.entrez[,2])))
+  genes.entrez.str <- sapply(genes.entrezID, toString) # as.character(genes.entrezID)
+  
+  # https://stuff.mit.edu/afs/athena/software/r/current/arch/i386_linux26/lib/R/library/org.Hs.eg.db/html/org.Hs.egSYMBOL.html
+  require('org.Hs.eg.db')
+  ## Bimap interface:
+  x <- org.Hs.egSYMBOL
+  # Get the gene symbol that are mapped to an entrez gene identifiers
+  mapped_genes <- mappedkeys(x)
+  # Convert to a list
+  xx <- as.list(x[mapped_genes])
+  
+  # *** The rownames are entrez IDs and the values are gene symbols
+  gene.entrez.to.symbol <- unlist(xx[genes.entrez.str])
+  
+  
+  ## --------------------------------------------------
+  #  Now convert the data from entrez ID format to gene format
+  data.standard <- data.GIANT.entrez
+  names(data.standard) <- c('gene1', 'gene2', 'is_annotated')
+  
+  # Sort the data by gene2 followed by gene1
+  if (is.unsorted(data.standard$gene2)){
+    ind <- order(data.standard$gene2)
+    data.standard <- data.standard[ind,]
+  }
+  
+  ind <- order(data.standard$gene1)
+  data.standard <- data.standard[ind,]
+  
+  # Group the pairs by gene1
+  gene.indices <- GroupUniqueElements(data.standard$gene1)
+  
+  # Now create a new data replacing the entrezIDs by gene symbols
+  # The size should not exceed the original data (may reduce in absence of matching)
+  gene1.symbol <- vector('character', dim(data.standard)[1])
+  gene2.symbol <- vector('character', dim(data.standard)[1])
+  is.annotated <- numeric(dim(data.standard)[1])
+  
+  curr.ind <- 1 # Track the progress
+  
+  for (i in row.names(gene.indices)){
+    # i <- row.names(gene.indices)[1]
+    
+    # This entrez ID doesn't have an associated gene_symbol
+    if (!(i %in% names(gene.entrez.to.symbol))){
+      next
+    }
+    
+    ## ---------- Get the symbol for first gene ----------
+    std.first.gene <- gene.entrez.to.symbol[i]
+    
+    # Now get the corresponding second genes and their associations
+    indices.i <- gene.indices[i,1] : gene.indices[i,2]
+    sec.genes.entrez <- as.character(data.standard$gene2[indices.i])
+    co.ann.values.cand <- data.standard$is_annotated[indices.i]
+    
+    ## ---------- Get the symbol for second genes ----------
+    # Remove the genes that don't have an entrez to symbol mapping
+    # sum(sec.genes.entrez %in% names(gene.entrez.to.symbol))
+    sec.genes.entrez.cand <- sec.genes.entrez[sec.genes.entrez %in% names(gene.entrez.to.symbol)]
+    std.second.genes <- gene.entrez.to.symbol[sec.genes.entrez.cand]
+    
+    ## ---------- Now get the corresponding annotation ----------
+    common.genes <- intersect(sec.genes.entrez, sec.genes.entrez.cand)
+    ind <- match(common.genes, sec.genes.entrez)
+    co.ann.values <- co.ann.values.cand[ind]
+    
+    curr.size <- length(co.ann.values)
+    ind.to.fill <- curr.ind: (curr.ind + curr.size - 1)
+    
+    gene1.symbol [ind.to.fill] <- rep(std.first.gene, length(ind.to.fill))
+    gene2.symbol [ind.to.fill] <- std.second.genes
+    is.annotated [ind.to.fill] <- co.ann.values
+    
+    curr.ind <- curr.ind + curr.size # Update
+  }
+  
+  
+  data.GIANT <- data.frame(gene1 = gene1.symbol, gene2 = gene2.symbol, is_annotated = is.annotated)
+  data.GIANT <- data.GIANT[-(curr.ind : length(is.annotated)), ]
+  
+  # If there is any NA in the gene names (which shouldn't be the case)
+  ind.na <- which(is.na(data.GIANT$gene2) | is.nan(data.GIANT$gene2))
+  if (length(ind.na) > 0){
+    data.GIANT <- data.GIANT[-ind.na, ]
+  }
+  
+  return (data.GIANT)
+}

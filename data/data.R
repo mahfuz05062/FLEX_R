@@ -11,7 +11,7 @@
 "data_complex"
 
 
-#' CP: Canonical pathways data from MsigDB (includes KEGG, Reactome, BIOCARTA etc. pathways)
+#' Canonical pathways (CP) data from MsigDB (includes KEGG, Reactome, BIOCARTA etc. pathways)
 #'
 #' @source https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp#C2
 #' @format A data frame with columns:
@@ -22,6 +22,19 @@
 #'  \item{Length}{Number of genes in a pathway}
 #' }
 "data_pathway"
+
+
+#' GO biological processes (BP)
+#'
+#' @source http://geneontology.org/docs/download-ontology/
+#' @format A data frame with columns:
+#' \describe{
+#'  \item{ID}{GO ID: an unique ID for each GO term}
+#'  \item{Name}{Name of the GO term}
+#'  \item{Genes}{Genes belonging to the GO term}
+#'  \item{Length}{Number of genes in the GO term}
+#' }
+"data_GO_BP"
 
 
 #' Two small subsets of the DepMap 19Q2 data (for testing)

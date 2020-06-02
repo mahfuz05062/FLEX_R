@@ -209,7 +209,7 @@ pr.stepwise <- list(first = list(data = pr_contri, cutoffs = c(seq(.1,1,0.025), 
 pr.stepwise <- append(pr.stepwise, list(second = list(data = pr_contri_noETC, cutoffs = c(seq(.1,1,0.025), 1))))
 pr.stepwise <- append(pr.stepwise, list(third = list(data = pr_contri_noAUChi, cutoffs = c(seq(.1,1,0.025), 1))))
 
-PlotCategoryPR(data_complex, pr.stepwise, ccol = c('black', 'red', 'green'))
+PlotCategoryPR(data_complex, pr.stepwise, thresholds = c(1, 0.3), ccol = c('#252525', '#fb6a4a', '#74c476'), legend.names = c('Full', 'ETC removed', 'high AUC, low size removed'))
 
 
 ## Following analysis are for testing the package

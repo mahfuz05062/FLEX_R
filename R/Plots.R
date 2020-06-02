@@ -596,16 +596,8 @@ PlotContributionStructure <- function(plot.data, cutoff.all, min.pairs = 10,
 #' @param excludeBG
 #' @param out_TP
 #'
-#' @return output.stepwise.contribution -> Stepwise contribution matrix
-#' This is a entity ID * cutoff data.frame (with an extra column added for entity Name)
-#'
-
-## Category PR Curve
 cTP_func <- function(data, anno, complexes,
                      percent_th = 0.05, tp_th = 1, excludeBG = T, out_TP = T) {
-
-  #x <- cTP_func(data = pr_contri, anno = pr_contri_anno,
-  #              complexes = coreComplex_members, percent_th = .3)
   
   # Replace modified names (for duplicate names that were modified before!)
   # Shouldn't happen anymore as we are removing the duplicates? But should we go back and modify the same name complexes?
@@ -619,10 +611,11 @@ cTP_func <- function(data, anno, complexes,
     print(data[i,])
     print(choose(length(complexes[[anno[[i]]]]), 2))
     
-    # Normalizing complex contribution by number of pairs
+    # Normalizing complex contribution by number of possible gene pairs (nC2)
     x[i,] <- data[i,] / choose(length(complexes[[anno[[i]]]]), 2) 
   }
 
+  # Applying a TP cutoff and a percent of complex contribution cutoff
   x <- c(apply(data >= tp_th & x > percent_th, 2, sum), 1)
 
   if(out_TP == FALSE) {
@@ -633,7 +626,7 @@ cTP_func <- function(data, anno, complexes,
     x <- x[-which(x == max(x))]
   }
 
-  x
+  return (x)
 }
 
 
@@ -641,20 +634,22 @@ cTP_func <- function(data, anno, complexes,
 #'
 #' @param data_complex Original input for the co-annotation standard
 #' @param pr.stepwise Stepwise Contribution (TP) per complex at different precisions
+#' @param legend.names legends for different curves
 #' @param ccol colors for each of the PR curves
+#' @param thresholds a vector of two thresholds to filter complexes (1) No of TP, (2) Percent of TP pairs captured.
 #' @param save.figure set to TRUE to save the figure (fig.title is used as the name)
 #' @param outfile.name the name of the output file(figure)
 #' @param outfile.type type of figure to save - 'pdf' (default) or 'png'
 #'
-#' @return output.stepwise.contribution -> Stepwise contribution matrix
-#' This is a entity ID * cutoff data.frame (with an extra column added for entity Name)
-PlotCategoryPR <- function(data_complex, pr.stepwise, ccol = NULL, save.figure = FALSE, outfile.name = 'test_category_PR', outfile.type = 'pdf'){
+#' @export
+#' 
+PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL, legend.names = NULL, ccol = NULL, save.figure = FALSE, outfile.name = 'test_category_PR', outfile.type = 'pdf'){
   
   # Remove complexes (say top complex, top 3, top 5, top 10 etc.) and generate the curve shown on the picture
   coreComplex_members <- strsplit(data_complex$Genes, "[;]") # ';' would work just fine
   names(coreComplex_members) <- data_complex$Name
   
-  # Save figure?
+  # Save figure
   if (save.figure){
     if(outfile.type == 'png'){
       png(paste0(outfile.name, ".png"), width = 2.5, height = 3, units="in", res = 300)
@@ -664,15 +659,21 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, ccol = NULL, save.figure =
   }
   
   for (i in 1 : length(pr.stepwise)) {
-    
     pr_contri = pr.stepwise[[i]]$data
     y <- pr.stepwise[[i]]$cutoffs
     
     pr_contri_anno <- pr_contri$Name
     pr_contri <- pr_contri[,-1]
     
-    x <- cTP_func(data = pr_contri, anno = pr_contri_anno,
-                  complexes = coreComplex_members, percent_th = .3)
+    if (is.null(thresholds)){
+      x <- cTP_func(data = pr_contri, anno = pr_contri_anno,
+                    complexes = coreComplex_members, percent_th = .3)
+    } else{
+      x <- cTP_func(data = pr_contri, anno = pr_contri_anno,
+                    complexes = coreComplex_members, 
+                    tp_th = thresholds[1], percent_th = thresholds[2])
+    }
+    
     
     if (i == 1){
       plot(x, y, xlab = "category TP", ylab = "precision", bty = "n", las=1, ylim = c(0,max(y)), pch = 16, type = "l", log = "x", col = ccol[i])
@@ -682,6 +683,11 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, ccol = NULL, save.figure =
     }
   }
 
+  if(!is.null(legend.names)){
+    legend("topright", legend = legend.names, fill = ccol, 
+           cex = 1, bty = "n", text.col = "black", horiz = F)
+  }
+  
   if (save.figure){
     dev.off()
   }
