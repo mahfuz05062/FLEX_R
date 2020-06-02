@@ -9,6 +9,7 @@ Imports:
     org.Hs.eg.db,
     AnnotationDbi
 Suggests: knitr, rmarkdown
+biocViews:
 LazyData: true
 VignetteBuilder: knitr
 Encoding: UTF-8
