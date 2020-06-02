@@ -150,9 +150,8 @@ MakeCoAnnotationFromGeneSymbols <- function(data_standard, overlap_length = 1, s
 
 
 #' Download the GIANT functional network and process it to use for FLEX
-#' 
-#' @param file_location The location to save the network. If ther file is there, this 
-#' will return the data. Otherwise, it will download, process and then return the data.
+#'
+#' @param file_location The location save the input GIANT file. If it is not there, it will be downloaded.
 #'
 #' @return a data frame for co-annotations of gene pairs
 #'  gene1: Name of the first gene in the gene pair
@@ -165,32 +164,28 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
   # file_location <- '/home/mahfuz/Desktop/CRISPR/FLEX/R/Tests/Package_Test/Vignette_test/global_standard.txt'
   
   if (!file.exists(file_location)){
+	message('Downloading GIANT data from http://giant.princeton.edu/static/standards/')
     download.file(url='http://giant.princeton.edu/static/standards/global_standard.dat', 
-                  destfile = file_location, method='curl')
-    
-    # Read the downloaded data
-    data.GIANT.entrez <- read.table(file_location,  header = F, sep = '\t', quote = '', stringsAsFactors = F)
-  } else{
-    
+                  destfile = file_location, method='curl')    
   }
+
+   # Read the downloaded data
+   data.GIANT.entrez <- read.table(file_location,  header = F, sep = '\t', quote = '', stringsAsFactors = F)
+
+   ## @import org.Hs.eg.db # Don't know how import works!
   
   ## --------------------------------------------------
   # Use an entrez to gene symbol mapping to convert this standard (in Entrez) to usable with FLEX (in Symbol)
   genes.entrezID <- sort(unique(union(data.GIANT.entrez[,1], data.GIANT.entrez[,2])))
   genes.entrez.str <- sapply(genes.entrezID, toString) # as.character(genes.entrezID)
   
-  # https://stuff.mit.edu/afs/athena/software/r/current/arch/i386_linux26/lib/R/library/org.Hs.eg.db/html/org.Hs.egSYMBOL.html
-  require('org.Hs.eg.db')
-  ## Bimap interface:
+  # https://stuff.mit.edu/afs/athena/software/r/current/arch/i386_linux26/lib/R/library/org.Hs.eg.db/html/org.Hs.egSYMBOL.html  
   x <- org.Hs.egSYMBOL
-  # Get the gene symbol that are mapped to an entrez gene identifiers
   mapped_genes <- mappedkeys(x)
-  # Convert to a list
   xx <- as.list(x[mapped_genes])
   
   # *** The rownames are entrez IDs and the values are gene symbols
   gene.entrez.to.symbol <- unlist(xx[genes.entrez.str])
-  
   
   ## --------------------------------------------------
   #  Now convert the data from entrez ID format to gene format

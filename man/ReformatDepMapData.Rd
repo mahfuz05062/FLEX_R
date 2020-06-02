@@ -9,7 +9,7 @@ ReformatDepMapData(filename, delim = ",")
 \arguments{
 \item{filename}{Name/location of the input depmap file.}
 
-\item{delim:}{Delimiter used to separate columns (',' is the default as it's usually used in depmap files)}
+\item{delim:}{Delimiter used to separate columns (',' is the default: usually used in depmap scores)}
 }
 \value{
 a data.frame in the format of genes (row) * screens (columns)

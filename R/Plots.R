@@ -693,5 +693,3 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL, legend.
   }
   
 }
-
-
