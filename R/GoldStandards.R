@@ -160,9 +160,13 @@ MakeCoAnnotationFromGeneSymbols <- function(data_standard, overlap_length = 1, s
 #' 
 #' @importFrom org.Hs.eg.db org.Hs.egSYMBOL
 #' @importFrom AnnotationDbi mappedkeys
-#' 
+#'
 #' @export
 #'  
+#' @examples
+#' file_loc <- '/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/GIN_Paper_Analysis/3_Standard_functional_evaluation/1_PR_Analysis/Data/global_standard.txt'
+#' 	data.ca <- MakeFuncNetFromGIANT(file_loc)
+#' 
 MakeFuncNetFromGIANT <- function(file_location = NULL){
   # file_location <- '/home/mahfuz/Desktop/CRISPR/FLEX/R/Tests/Package_Test/Vignette_test/global_standard.txt'
   

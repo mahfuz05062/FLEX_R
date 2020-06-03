@@ -41,9 +41,13 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     # print ("Check the inputs again ... they are supposed to be data.frame's")
     # return (NULL)
   }
-  if (is.null(row.names(data.interaction))){
+
+  if (is.null(row.names(data.interaction[1,]))){
     stop ("data.interaction does not contain gene names as row names ...")
   }
+
+  ## *** Decide which function to call and prepare data for that!
+  subset <- sort(sample(1:dim(data.interaction)[1], dim(data.interaction)[1] / 10))
   
   # 1. Pairwise data in the format of Gene1 Gene2 Similarity
   if (dim(data.interaction)[2] == 3) {
@@ -59,10 +63,9 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     }
     
   } else if ( (dim(data.interaction)[1] == dim(data.interaction)[2]) & 
-       isSymmetric(as.matrix(data.interaction)) ) { 
-    # 2. Pairwise correlation / similarity data provided as a square matrix
-    
-    # Check: 1. Square, 2. Symmetric
+       isSymmetric(as.matrix(data.interaction[subset, subset]))) {
+    # 2. Pairwise correlation / similarity data provided as a square matrix    
+    # Check: 1. Square, 2. Symmetric (We are using a random subset to reduce memory footprint)
     print('Pairwise correlation/similarity matrix provided ...')
     
     # Sort the pairwise data by gene names (we need to do it on both row and column side)
@@ -286,7 +289,7 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
     
     ## Get similarity data for all pairs of curr.unique.gene
     ind.sim <- gene.indices.sim[i,1] : gene.indices.sim[i,2]
-    similarity.values <- data.interaction[ind.sim, 3] # parentheses is important
+    similarity.values <- data.interaction[ind.sim, 3]
     names(similarity.values) <- data.interaction[ind.sim, 2]
     
     # Remove the nan correlation values and corresponding interactions
@@ -298,22 +301,24 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
     ## Assign the true lables (1,0) from the functional standard
     common.genes <- intersect(names(similarity.values), std.second.genes)
     values.true <- co.ann.values[common.genes]
-    values.predicted <- similarity.values[common.genes]
-    
+    values.predicted <- similarity.values[common.genes]    
     curr.size <- length(values.true)
-    combined.true[curr.ind: (curr.ind + curr.size - 1)]  <-  values.true
-    combined.score[curr.ind: (curr.ind + curr.size - 1)] <-  values.predicted
-    
-    # If we have to store the IDs and indices too
-    if (dim(data.standard)[2] == 4){
-      co.ann.IDs <- data.standard[ind.curr, 4]
-      names(co.ann.IDs) <- std.second.genes
-      source[curr.ind: (curr.ind + curr.size - 1)] <- co.ann.IDs[common.genes]
+
+    if (curr.size > 0){ # R will produce an error otherwise
+      combined.true[curr.ind: (curr.ind + curr.size - 1)]  <-  values.true
+      combined.score[curr.ind: (curr.ind + curr.size - 1)] <-  values.predicted
       
-      values.indices <- ind.curr
-      names(values.indices) <- std.second.genes
-      indices.in.standard[curr.ind: (curr.ind + curr.size - 1)] <- values.indices[common.genes]
-    }
+      # If we have to store the IDs and indices too
+      if (dim(data.standard)[2] == 4){
+        co.ann.IDs <- data.standard[ind.curr, 4]
+        names(co.ann.IDs) <- std.second.genes
+        source[curr.ind: (curr.ind + curr.size - 1)] <- co.ann.IDs[common.genes]
+        
+        values.indices <- ind.curr
+        names(values.indices) <- std.second.genes
+        indices.in.standard[curr.ind: (curr.ind + curr.size - 1)] <- values.indices[common.genes]
+      }
+    }    
     
     curr.ind <- curr.ind + curr.size # Update
     
