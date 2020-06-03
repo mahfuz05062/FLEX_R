@@ -47,7 +47,8 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
   }
 
   ## *** Decide which function to call and prepare data for that!
-  subset <- sort(sample(1:dim(data.interaction)[1], dim(data.interaction)[1] / 10))
+  min_dim <- min(dim(data.interaction)[1], dim(data.interaction)[2])
+  subset <- sort(sample(1:min_dim, min_dim / 10))
   
   # 1. Pairwise data in the format of Gene1 Gene2 Similarity
   if (dim(data.interaction)[2] == 3) {
