@@ -64,12 +64,12 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
       legend.color = palette(rainbow(n = length(pred.ca)))
     }
   }
-
+  
   
   ## *** Make the data to plot on the x (TP) and y (Precision) axis
   for (i in 1 : length(pred.ca)){
     
-      test <- GenerateDataForPerfCurve(value.predicted = pred.ca[[i]]$predicted, value.true = pred.ca[[i]]$true, neg.to.pos = neg.to.pos, x.axis = 'TP', y.axis = 'precision')
+    test <- GenerateDataForPerfCurve(value.predicted = pred.ca[[i]]$predicted, value.true = pred.ca[[i]]$true, neg.to.pos = neg.to.pos, x.axis = 'TP', y.axis = 'precision')
     
     ## ** If we want a faster plot (less points)
     if (subsample){
@@ -83,20 +83,28 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
       small_y <- test$y[unique.index]
       
       # Now subsample from the whole space (top 100, and then 100 from each 10^ range)
-      keep.index <- c(1:100) # All from 1 to 100
       highest.power <- ceiling(log10(length(small_x)))
       
-      # 100 from each interval (i.e 1001 to 10000)
-      for (pow in 3 : (highest.power - 1)){
-        keep.index <- c(keep.index, c(round(seq(10^(pow-1)+1, 10^pow, length = 100))))
+      if (highest.power > 3){
+        # All from 1 to 100
+        keep.index <- c(1:100)
+        
+        # 100 from each interval (i.e 1001 to 10000)
+        for (pow in 3 : (highest.power - 1)){
+          keep.index <- c(keep.index, c(round(seq(10^(pow-1)+1, 10^pow, length = 100))))
+        }
+        max.available <- min(100, length(small_x) - (10^pow))
+        keep.index <- c(keep.index, 
+                        c(round(seq(10^pow+1, length(small_x), 
+                                    length = max.available))))
+        
+        test$x <- small_x[keep.index]
+        test$y <- small_y[keep.index]
+        
+      } else{ # If the number of points are < 1000, no need for subsampling
+        test$x <- small_x
+        test$y <- small_y
       }
-      max.available <- min(100, length(small_x) - (10^pow))
-      keep.index <- c(keep.index, 
-                      c(round(seq(10^pow+1, length(small_x), 
-                                  length = max.available))))
-      
-      test$x <- small_x[keep.index]
-      test$y <- small_y[keep.index] 
     }
     
     if (i == 1){
@@ -104,7 +112,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
     } else{
       plot.data <- append(plot.data, list(list(x = test$x, y = test$y)))
     }
-  }
+  } # end for
   
   ## *** Calculate the max y-lim and x-lim for the plots 
   #  In R, we have to this beforehand as we are going to plot multiple lines
@@ -116,11 +124,11 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
     
     ind.10 <- which(tmp$x == 9) # Remove data for TP < 10
     
-    if (length(ind.10) > 0){ # What if it's not there?
+    if (length(ind.10) > 0){ 
       # The first 10 points are excluded from plotting
       x <- max(tmp$x[-(1:ind.10[length(ind.10)])])
       y <- max(tmp$y[-(1:ind.10[length(ind.10)])])
-    } else{
+    } else{ # What if it's not there?
       x <- max(tmp$x)
       y <- max(tmp$y)
     }
@@ -131,7 +139,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
     if (y > plot.ylim){
       plot.ylim <- y
     }
-  }
+  } # end for
   
   plot.xlim <- 10 ^ ceiling(log10(plot.xlim))
   plot.ylim <- round(plot.ylim + 0.01, 2)
@@ -605,7 +613,7 @@ cTP_func <- function(data, anno, complexes,
   for(i in x) {
     anno[i] <- substr(anno[[i]], 1, nchar(anno[[i]]) - 2)
   }
-
+  
   x <- data # Stepwise contribution per precision
   for(i in 1:dim(data)[1]) {
     print(data[i,])
@@ -614,18 +622,18 @@ cTP_func <- function(data, anno, complexes,
     # Normalizing complex contribution by number of possible gene pairs (nC2)
     x[i,] <- data[i,] / choose(length(complexes[[anno[[i]]]]), 2) 
   }
-
+  
   # Applying a TP cutoff and a percent of complex contribution cutoff
   x <- c(apply(data >= tp_th & x > percent_th, 2, sum), 1)
-
+  
   if(out_TP == FALSE) {
     x <- x / max(x) #recall
   }
-
+  
   if(excludeBG) {
     x <- x[-which(x == max(x))]
   }
-
+  
   return (x)
 }
 
@@ -682,7 +690,7 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL, legend.
       lines(x, y, col = ccol[i])
     }
   }
-
+  
   if(!is.null(legend.names)){
     legend("topright", legend = legend.names, fill = ccol, 
            cex = 1, bty = "n", text.col = "black", horiz = F)
