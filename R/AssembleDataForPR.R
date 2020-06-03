@@ -154,17 +154,12 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   pb_count <- 0
   
   for (i in ind.int.genes.in.std){
-    
-    # Query gene entrez ID
-    # common.gene.ID <- gene.symbol[i] # gene symbol
-    # curr.unique.gene <- intersect(common.gene.ID, unique.names.genes)
-    
     curr.unique.gene <- gene.symbol[i]
     
     ## Get standard data for this names.genes (with others associated with it)
-    ind.curr <- gene.indices[curr.unique.gene,1] : gene.indices[curr.unique.gene,2]
-    std.second.genes <- data.standard[ind.curr, 2]
-    co.ann.values <- data.standard[ind.curr, 3]
+    ind.pairs.in.std <- gene.indices[curr.unique.gene,1] : gene.indices[curr.unique.gene,2]
+    std.second.genes <- data.standard[ind.pairs.in.std, 2]
+    co.ann.values <- data.standard[ind.pairs.in.std, 3]
     names(co.ann.values) <- std.second.genes
     
     # *** Considering only Upper triangle (both datasets must be sorted)
@@ -183,18 +178,20 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
     # print(paste(i, length(values.true), sep = ' '))
     
     if (curr.size > 0){ # R will produce an error otherwise
+      # Save true (co-annotation: 1/0) and predicted (pairwise similarity)
       combined.true[curr.ind: (curr.ind + curr.size - 1)]  <-  values.true
       combined.score[curr.ind: (curr.ind + curr.size - 1)] <-  values.predicted
       
-      # If we have to store the IDs and indices too
+      # Save indices (to refer to data.standard to retrieve the gene pair symbols)
+      values.indices <- ind.pairs.in.std
+      names(values.indices) <- std.second.genes
+      indices.in.standard[curr.ind: (curr.ind + curr.size - 1)] <- values.indices[common.genes]
+      
+      # If the ID of the pair (which complex/PW it belongs) is provided
       if (dim(data.standard)[2] == 4){
-        co.ann.IDs <- data.standard[ind.curr, 4]
+        co.ann.IDs <- data.standard[ind.pairs.in.std, 4]
         names(co.ann.IDs) <- std.second.genes
         source[curr.ind: (curr.ind + curr.size - 1)] <- co.ann.IDs[common.genes]
-        
-        values.indices <- ind.curr
-        names(values.indices) <- std.second.genes
-        indices.in.standard[curr.ind: (curr.ind + curr.size - 1)] <- values.indices[common.genes]
       }
     }
     
@@ -209,22 +206,21 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   ## Remove the unnecessary part of the data
   combined.true <- combined.true[1: (curr.ind - 1)]
   combined.score <- combined.score[1: (curr.ind - 1)]
+  indices.in.standard <- indices.in.standard[1: (curr.ind - 1)]
   
   ## Remove the na correlation values and corresponding interactions
   ind.na <- which(is.na(combined.score) | is.nan(combined.score))
   if (length(ind.na) > 0){
     combined.score <- combined.score[-ind.na]
-    combined.true <- combined.true[-ind.na]  
+    combined.true <- combined.true[-ind.na]
+    indices.in.standard <- indices.in.standard[-ind.na]
   }
   
   # If data.standard is of dimension 4 (contains ID information)
   if (dim(data.standard)[2] == 4){
     source <- source[1: (curr.ind - 1)]
-    indices.in.standard <- indices.in.standard[1: (curr.ind - 1)]
-    
     if (length(ind.na) > 0){
       source <- source[-ind.na]
-      indices.in.standard <- indices.in.standard[-ind.na]
     }
   }
   
@@ -232,7 +228,7 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   if (dim(data.standard)[2] == 4){
     return(list(true = combined.true, predicted = combined.score, ID = source, index = indices.in.standard))
   } else{
-    return(list(true = combined.true, predicted = combined.score))
+    return(list(true = combined.true, predicted = combined.score, index = indices.in.standard))
   }
 }
 
@@ -258,7 +254,6 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
   gene.indices.sim <- out 
   unique.names.genes.sim <- row.names(out)
   
-  
   # Fill out similarity values and corresponding co-annotation (1/0) for each
   # common gene pairs between similarity and co-annotation
   combined.true <- numeric(dim(data.standard)[1]) # 0 - default/ initialization value
@@ -275,17 +270,13 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
   # For pairwise corr, the last one won't be there
   print('Associating similarity values of pairs to pos(1) / neg(0) co-annotation ... ')
   pb <- txtProgressBar(style = 3) # Progress bar
-  for (i in ind.int.genes.in.std){
-    # Query gene entrez ID
-    # common.gene.ID <- gene.symbol[i] # gene symbol
-    # curr.unique.gene <- intersect(common.gene.ID, unique.names.genes.std)
-    
+  for (i in ind.int.genes.in.std){    
     curr.unique.gene <- unique.names.genes.sim[i]
     
     ## Get co-annotation values for all pairs of curr.unique.gene
-    ind.curr <- gene.indices.std[curr.unique.gene,1] : gene.indices.std[curr.unique.gene,2]
-    std.second.genes <- data.standard[ind.curr, 2]
-    co.ann.values <- data.standard[ind.curr, 3]
+    ind.pairs.in.std <- gene.indices.std[curr.unique.gene,1] : gene.indices.std[curr.unique.gene,2]
+    std.second.genes <- data.standard[ind.pairs.in.std, 2]
+    co.ann.values <- data.standard[ind.pairs.in.std, 3]
     names(co.ann.values) <- std.second.genes
     
     ## Get similarity data for all pairs of curr.unique.gene
@@ -309,15 +300,16 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
       combined.true[curr.ind: (curr.ind + curr.size - 1)]  <-  values.true
       combined.score[curr.ind: (curr.ind + curr.size - 1)] <-  values.predicted
       
-      # If we have to store the IDs and indices too
+      # Save indices (to refer to data.standard to retrieve the gene pair symbols)
+      values.indices <- ind.pairs.in.std
+      names(values.indices) <- std.second.genes
+      indices.in.standard[curr.ind: (curr.ind + curr.size - 1)] <- values.indices[common.genes]
+      
+      # If the ID of the pair (which complex/PW it belongs) is provided
       if (dim(data.standard)[2] == 4){
-        co.ann.IDs <- data.standard[ind.curr, 4]
+        co.ann.IDs <- data.standard[ind.pairs.in.std, 4]
         names(co.ann.IDs) <- std.second.genes
         source[curr.ind: (curr.ind + curr.size - 1)] <- co.ann.IDs[common.genes]
-        
-        values.indices <- ind.curr
-        names(values.indices) <- std.second.genes
-        indices.in.standard[curr.ind: (curr.ind + curr.size - 1)] <- values.indices[common.genes]
       }
     }    
     
@@ -330,22 +322,21 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
   ## Remove the unnecessary part of the data
   combined.true <- combined.true[1: (curr.ind - 1)]
   combined.score <- combined.score[1: (curr.ind - 1)]
+  indices.in.standard <- indices.in.standard[1: (curr.ind - 1)]
   
   ## Remove the na correlation values and corresponding interactions
   ind.na <- which(is.na(combined.score) | is.nan(combined.score))
   if (length(ind.na) > 0){
     combined.score <- combined.score[-ind.na]
-    combined.true <- combined.true[-ind.na]  
+    combined.true <- combined.true[-ind.na]
+    indices.in.standard <- indices.in.standard[-ind.na]
   }
   
   # If data.standard is of dimension 4 (contains ID information)
   if (dim(data.standard)[2] == 4){
     source <- source[1: (curr.ind - 1)]
-    indices.in.standard <- indices.in.standard[1: (curr.ind - 1)]
-    
     if (length(ind.na) > 0){
       source <- source[-ind.na]
-      indices.in.standard <- indices.in.standard[-ind.na]
     }
   }
   
@@ -353,7 +344,7 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
   if (dim(data.standard)[2] == 4){
     return(list(true = combined.true, predicted = combined.score, ID = source, index = indices.in.standard))  
   } else{
-    return(list(true = combined.true, predicted = combined.score))
+    return(list(true = combined.true, predicted = combined.score, index = indices.in.standard))
   }
 }
 
