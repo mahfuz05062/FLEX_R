@@ -410,7 +410,7 @@ getSubsetOfCoAnnRemoveIDs <- function(data.standard, ids, replace = FALSE){
 
 
 
-#' Remove a set of genes to re-evaluate the data. Should be used only when we can't use the sister function getSubsetOfCoAnnRemoveIDs.
+#' Remove a set of genes to re-evaluate the data. Should be used only when we can't use the sister function getSubsetOfCoAnnRemoveIDs or getSubsetOfCoAnnRemovePairs.
 #' @param data_standard A co-annotation standard (data.frame)
 #' @param data_subset Output of CalculatePredictionAndTrueOnLibraryProfiles with index column (data.frame)
 #' @param gene_list a vector of genes to remove. This will, for positive examples, remove all the pairs that include the gene. (character vector)
@@ -637,12 +637,11 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
   # Final data
   if (replace == FALSE){ # Way1 (default): Remove the positive examples associated with '320'
     data.output <- data.output[-log_ind_pos[interested_indices], ]
-  } 
-  else { # Way 2: Convert the positive examples associated with '320' to negative
+  } else { # Way 2: Convert the positive examples associated with '320' to negative
     if (sum(grepl('true', colnames(data.standard)))){
-      data.output$true[log_ind_pos[interested_indices]] = 0
+      data.output$true[log_ind_pos[interested_indices]] <- 0
     } else{
-      data.output$is_annotated[log_ind_pos[interested_indices]] = 0
+      data.output$is_annotated[log_ind_pos[interested_indices]] <- 0
     }
   }
   
