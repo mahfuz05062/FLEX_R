@@ -335,7 +335,7 @@ GetStepwiseContributionOfEntities <- function (Pairs.in.data, cutoff.all, summar
 }
 
 
-#' Remove a complex (or complexes) to re-evaluate the data
+#' Remove a complex (or complexes) to re-evaluate the data. This removes all the positive pairs associated with them complex (thereby effectively removing the complex).
 #' @param data.standard input data: either co-annotation standard or output of CalculatePredictionAndTrueOnLibraryProfiles as a data.frame (need the 'ID' column for both)
 #' @param ids the complex ids to remove
 #' @param replace
@@ -388,16 +388,121 @@ getSubsetOfCoAnnRemoveIDs <- function(data.standard, ids, replace = FALSE){
   
   interested.indices = unique(interested.indices) # 3003
   length(interested.indices)
+
+  data.standard[log.ind.pos[interested.indices], ]
   
   # Final data
   if (replace == FALSE){ # Way1: Remove the positive examples associated with '320'
     data.output = data.standard
     data.output <- data.output[-log.ind.pos[interested.indices], ]
   } 
-  else { # Way 2: Convert the positive examples associated with '320' to negative
-    data.output = data.standard;            
-    data.output$is_annotated[log.ind.pos[interested.indices]] = 0 # Postive is 1
+  else { # Way 2: Convert the positive (1) examples associated with '320' to negative (0)
+    data.output = data.standard
+    if (sum(grepl('true', colnames(data.standard)))){
+      data.output$true[log.ind.pos[interested.indices]] = 0
+    } else{
+      data.output$is_annotated[log.ind.pos[interested.indices]] = 0
+    }
   }
  
+  return (data.output) 
+}
+
+
+
+#' Remove a set of genes to re-evaluate the data. Should be used only when we can't use the sister function getSubsetOfCoAnnRemoveIDs.
+#' @param data_standard A co-annotation standard (data.frame)
+#' @param data_subset Output of CalculatePredictionAndTrueOnLibraryProfiles with index column (data.frame)
+#' @param genes a vector of genes to remove. This will, for positive examples, remove all the pairs that include the gene. (character vector)
+#' @param replace
+#'  Way1 (replace = false): Remove the positive pairs associated to ids.
+#'  This reduces the size of the data a bit.
+#'  Way2 (replace = true): Convert the positive pairs to negatives. 
+#'  This will maintain the size (number of pairs) of the data.
+#' @export
+#' 
+getSubsetOfCoAnnRemoveGenes <- function(data_standard, data_subset, gene_list, replace = FALSE){
+  
+  ## *** Check input data format
+  if( (class(data_standard) != 'data.frame') | (class(data_subset) != 'data.frame')){
+    stop ("data_standard is supposed to be data.frame")
+  }
+  if(class(gene_list) != 'character'){
+    stop ("ids is supposed to be a character vector")
+  }
+  
+  ## *** Check if index column is given for data_subset
+  if (!sum(grepl('index', colnames(data_subset)))){
+    stop('No indices given for data_subset .. we need this!!')
+  }
+  
+  ## Get the positive examples (TPs)
+  if (sum(grepl('true', colnames(data_subset)))){
+    ind_pos = which(data_subset$true == 1)  
+  } else if (sum(grepl('is_annotated', colnames(data_subset)))){
+    ind_pos = which(data_subset$is_annotated == 1)  
+  } else{
+    stop ("ill-formated input: no column named 'is_annotated' or 'true' ")
+    return (NULL)
+  }
+  
+  tmp = data_subset[ind_pos,]
+  # identical(data_standard$ID[tmp$index], tmp$ID) # Should be true: Sanity check
+  # Now get the gene symbols from data_standard and merge
+  row.names(tmp) <- tmp$index # The indices are the row identifiers in data_standard
+  data.input <- cbind(data_standard[tmp$index,c('gene1', 'gene2')], tmp)
+  
+  ## Sort the data by first gene (and group them)
+  ind <- order(data.input$gene1)
+  data.tmp <- data.input[ind,]
+  gene.indices <- GroupUniqueElements(data.tmp$gene1)
+  
+  genes_overlapping <- sort(intersect(gene_list, row.names(gene.indices)))
+  interested_indices = c()
+  for (i in genes_overlapping){
+    interested_indices = c(interested_indices, gene.indices[i,1] : gene.indices[i,2])
+  }
+  interested_indices = ind[interested_indices]
+  
+  ## Sort the data by second gene (This part is usually unnecessary as our data is sorted and there are no duplicate pairs)
+  ind <- order(data.input$gene2)
+  data.tmp <- data.input[ind,]
+  gene.indices <- GroupUniqueElements(data.tmp$gene2)
+  
+  genes_overlapping <- sort(intersect(gene_list, row.names(gene.indices)))
+  interested_indices_tmp = c()
+  for (i in genes_overlapping){
+    interested_indices_tmp = c(interested_indices_tmp, gene.indices[i,1] : gene.indices[i,2])
+  }
+  
+  interested_indices = c(interested_indices, ind[interested_indices_tmp])
+  interested_indices = unique(interested_indices) # 3003
+  length(interested_indices)
+  
+  # data.input[interested_indices,]
+  # data_subset[ind_pos[interested_indices], ]
+  ## *** The problem of this is it can remove some pairs where one gene come from the complex, and the other from somewhere else!!!
+  if (FALSE){
+    discrepancy.ind <- setdiff(data_subset[ind_pos[interested_indices], 'index'], data.standard[log.ind.pos[interested.indices], 'index'])
+    tmp.match <- intersect(data_subset$index, discrepancy.ind)
+    tmp.ind <- match(tmp.match, data_subset$index)
+    data_standard[data_subset[tmp.ind,'index'], ]  
+  }
+  
+  # Final data
+  if (replace == FALSE){ # Way1 (default): Remove the positive examples associated with '320'
+    data.output <- data_subset
+    data.output <- data.output[-ind_pos[interested_indices], ]
+  } 
+  else { # Way 2: Convert the positive examples associated with '320' to negative
+    data.output <- data_subset
+    
+    if (sum(grepl('true', colnames(data.standard)))){
+      data.output$true[ind_pos[interested.indices]] = 0
+    } else{
+      data.output$is_annotated[ind_pos[interested.indices]] = 0
+    }
+  }
+  
   return (data.output) 
 }
