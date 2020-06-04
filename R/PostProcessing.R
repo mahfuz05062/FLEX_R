@@ -413,7 +413,7 @@ getSubsetOfCoAnnRemoveIDs <- function(data.standard, ids, replace = FALSE){
 #' Remove a set of genes to re-evaluate the data. Should be used only when we can't use the sister function getSubsetOfCoAnnRemoveIDs.
 #' @param data_standard A co-annotation standard (data.frame)
 #' @param data_subset Output of CalculatePredictionAndTrueOnLibraryProfiles with index column (data.frame)
-#' @param genes a vector of genes to remove. This will, for positive examples, remove all the pairs that include the gene. (character vector)
+#' @param gene_list a vector of genes to remove. This will, for positive examples, remove all the pairs that include the gene. (character vector)
 #' @param replace
 #'  Way1 (replace = false): Remove the positive pairs associated to ids.
 #'  This reduces the size of the data a bit.
@@ -498,9 +498,151 @@ getSubsetOfCoAnnRemoveGenes <- function(data_standard, data_subset, gene_list, r
     data.output <- data_subset
     
     if (sum(grepl('true', colnames(data.standard)))){
-      data.output$true[ind_pos[interested.indices]] = 0
+      data.output$true[ind_pos[interested_indices]] = 0
     } else{
-      data.output$is_annotated[ind_pos[interested.indices]] = 0
+      data.output$is_annotated[ind_pos[interested_indices]] = 0
+    }
+  }
+  
+  return (data.output) 
+}
+
+
+
+#' Remove gene-pairs to re-evaluate the data. This is probably more accurate (albeit time consuming) than getSubsetOfCoAnnRemoveGenes
+#' @param data_standard A co-annotation standard (data.frame)
+#' @param data_subset Output of CalculatePredictionAndTrueOnLibraryProfiles with index column (data.frame)
+#' @param gene_list Any co-functionality between genes in this list will be removed.
+#' @param replace
+#'  Way1 (replace = false): Remove the positive pairs associated to ids.
+#'  This reduces the size of the data a bit.
+#'  Way2 (replace = true): Convert the positive pairs to negatives. 
+#'  This will maintain the size (number of pairs) of the data.
+#' @export
+#' 
+getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, replace = FALSE){
+  
+  ## *** Check input data format
+  if( (class(data_standard) != 'data.frame') | (class(data_subset) != 'data.frame')){
+    stop ("data_standard is supposed to be data.frame")
+  }
+  if(class(gene_list) != 'list'){
+    stop ("gene_list is supposed to be a list of genes")
+  }
+  
+  ## *** Check if gene pairs are provided for data_standard
+  pair_sum <- sum(grepl('gene1', colnames(data_standard))) + 
+    sum(grepl('gene2', colnames(data_standard)))
+  if (pair_sum != 2)
+    stop('data_standard: gene pair names are not provided !!')
+  }
+  
+  ## ===================================================
+  ## Get the positive pairs from the provided inputs
+  if (!is.null(data_subset)){ # data_subset is provided
+    if (!sum(grepl('index', colnames(data_subset)))){
+      stop('No indices given for data_subset .. we need this!!')
+    }
+    if (sum(grepl('true', colnames(data_subset)))){
+      log_ind_pos = which(data_subset$true == 1)
+      tmp = data_subset[log_ind_pos,]
+      row.names(tmp) <- tmp$index # The indices are the row identifiers in data_standard
+      
+      data_input <- cbind(data_standard[tmp$index,c('gene1', 'gene2')], tmp)
+    } else{
+      stop ("ill-formated input for data_subset: no column named 'true' ")
+      return (NULL)
+    }
+    
+    data.output <- data_subset # Initializing output
+    
+  } else{ # data_subset is NULL / not provided
+    if (sum(grepl('is_annotated', colnames(data_standard)))){
+      log_ind_pos = which(data_standard$is_annotated == 1)
+      data_input <- data_standard[log_ind_pos, ]
+      
+      data.output <- data_standard # Initializing output
+    } else{
+      stop ("ill-formated input for data_standard: no column named 'is_annotated' ")
+      return (NULL)
+    }
+  }
+
+  ## Sort the data by first gene and group
+  ind_saved <- order(data_input$gene1)
+  data_tmp <- data_input[ind_saved,]
+  
+  ind_source <- GroupUniqueElements(data_tmp$gene1)
+  genes_source <- row.names(ind_source)
+  
+  ## -------- Construct the list of unique pairs to remove / replace --------
+  gene_first <- c()
+  gene_second <- c()
+  count <- 0
+  
+  for (i in 1:length(gene_list) ){
+    genes_in_complex <- sort(gene_list[[i]])
+    count <- count + choose(length(genes_in_complex), 2)
+    
+    for (j in 1: (length(genes_in_complex)-1) ){ # The -1 is necessary
+      for (k in (j+1):length(genes_in_complex) ){
+        gene_first = c(gene_first, genes_in_complex[j])
+        gene_second = c(gene_second, genes_in_complex[k])
+      }  
+    }
+  }
+  
+  # Only keep the unique pairs
+  gene_combined <- paste(gene_first, gene_second, sep = '_')
+  unique.index <- which(!duplicated(gene_combined))
+  pair_list <- as.data.frame(cbind(gene_first[unique.index], gene_second[unique.index]), stringsAsFactors = FALSE)
+  colnames(pair_list) <- c('first', 'second') # 969 candidate pairs for removal (ETCI) - good
+  
+  # Now sort the pairs and group them
+  ind <- order(pair_list$second) # by second gene
+  pair_list <- pair_list[ind,]
+  ind <- order(pair_list$first) # then by first gene
+  pair_list <- pair_list[ind,]
+  
+  ind_cand <- GroupUniqueElements(pair_list$first) # group by first gene
+  genes_cand <- row.names(ind_cand) # ETCI (45) - good
+  
+  
+  # Now find the pairs (indices) to remove in the source/annotation data
+  genes_common <- intersect(genes_source, genes_cand) # 36 (if genes_source comes from data_subset), otherwise 45
+  ia <- match(genes_common, genes_source)
+  ic <- match(genes_common, genes_cand)
+  
+  interested_indices <- c()
+  
+  for (i in 1 : length(ia)){
+    sec_genes_cand <- pair_list$second[ind_cand[ic[i],1]:ind_cand[ic[i],2]]
+    
+    src_indices <- ind_source[ia[i],1] : ind_source[ia[i],2]
+    sec_genes_source <- data_tmp$gene2[src_indices]
+    
+    genes_tmp <- intersect(sec_genes_source, sec_genes_cand)
+    ia_source <- match(genes_tmp, sec_genes_source)
+    
+    interested_indices = c(interested_indices, src_indices[ia_source])
+  }
+  
+  length(interested_indices)
+
+  # data_tmp[interested_indices,]
+  # one of the following are going to be true
+  # identical(data_standard[log_ind_pos[ind_saved[ interested_indices]],'is_annotated'], data_tmp[interested_indices,'is_annotated'])
+  # identical(data_subset[log_ind_pos[ind_saved[ interested_indices]],'true'], data_tmp[interested_indices,'true'])
+  
+  # Final data
+  if (replace == FALSE){ # Way1 (default): Remove the positive examples associated with '320'
+    data.output <- data.output[-log_ind_pos[interested_indices], ]
+  } 
+  else { # Way 2: Convert the positive examples associated with '320' to negative
+    if (sum(grepl('true', colnames(data.standard)))){
+      data.output$true[log_ind_pos[interested_indices]] = 0
+    } else{
+      data.output$is_annotated[log_ind_pos[interested_indices]] = 0
     }
   }
   
