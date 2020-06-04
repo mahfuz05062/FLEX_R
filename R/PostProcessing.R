@@ -613,8 +613,12 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
   ia <- match(genes_common, genes_source)
   ic <- match(genes_common, genes_cand)
   
-  interested_indices <- c()
+  # Check for unexpected output
+  if(length(ia) == 0){
+    return (data.output)
+  }
   
+  interested_indices <- c()
   for (i in 1 : length(ia)){
     sec_genes_cand <- pair_list$second[ind_cand[ic[i],1]:ind_cand[ic[i],2]]
     
@@ -626,13 +630,17 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
     
     interested_indices = c(interested_indices, src_indices[ia_source])
   }
-  
   length(interested_indices)
 
   # data_tmp[interested_indices,]
   # one of the following are going to be true
   # identical(data_standard[log_ind_pos[ind_saved[ interested_indices]],'is_annotated'], data_tmp[interested_indices,'is_annotated'])
   # identical(data_subset[log_ind_pos[ind_saved[ interested_indices]],'true'], data_tmp[interested_indices,'true'])
+  
+  # Check for unexpected output
+  if (length(interested_indices) == 0){
+    return (data.output)
+  }
   
   # Final data
   if (replace == FALSE){ # Way1 (default): Remove the positive examples associated with '320'
