@@ -613,13 +613,8 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
   ia <- match(genes_common, genes_source)
   ic <- match(genes_common, genes_cand)
   
-  # Check for unexpected output
-  if(length(ia) == 0){
-    return (data.output)
-  }
-  
   interested_indices <- c()
-  for (i in 1 : length(ia)){
+  for (i in seq_along(ia)){ # i in 1 : length(ia) will fail if ia is empty
     sec_genes_cand <- pair_list$second[ind_cand[ic[i],1]:ind_cand[ic[i],2]]
     
     src_indices <- ind_source[ia[i],1] : ind_source[ia[i],2]
