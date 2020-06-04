@@ -625,7 +625,7 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
     
     interested_indices = c(interested_indices, src_indices[ia_source])
   }
-  length(interested_indices)
+  (length(interested_indices))
 
   # data_tmp[interested_indices,]
   # one of the following are going to be true

@@ -662,7 +662,7 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL, legend.
     if(outfile.type == 'png'){
       png(paste0(outfile.name, ".png"), width = 2.5, height = 3, units="in", res = 300)
     }else{
-      pdf(file = paste0(outfile.name, ".pdf"), width = 2.5, height = 3, useDingbats = F)
+      pdf(file = paste0(outfile.name, ".pdf"))
     }
   }
   
