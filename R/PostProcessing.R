@@ -533,7 +533,7 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
   ## *** Check if gene pairs are provided for data_standard
   pair_sum <- sum(grepl('gene1', colnames(data_standard))) + 
     sum(grepl('gene2', colnames(data_standard)))
-  if (pair_sum != 2)
+  if (pair_sum != 2){
     stop('data_standard: gene pair names are not provided !!')
   }
   
