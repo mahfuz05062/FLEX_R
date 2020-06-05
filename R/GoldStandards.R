@@ -124,9 +124,7 @@ MakeCoAnnotationFromGeneSymbols <- function(data_standard, overlap_length = 1, s
   close(pb)
   
   # Convert annotation_value to a zero/one (presence or absence of co-annotation)
-  data_co_annotation <- data.frame(gene1 = gene_first, gene2 = gene_second, is_annotated = annotation_value, 
-                                   ID = complex_id_association, 
-                                   stringsAsFactors = FALSE) # stringAsFactors is super important here
+  data_co_annotation <- data.frame(gene1 = gene_first, gene2 = gene_second, is_annotated = annotation_value, ID = complex_id_association, stringsAsFactors = FALSE) # stringAsFactors is super important here
   data_co_annotation$is_annotated[data_co_annotation$is_annotated < overlap_length] <- 0
   data_co_annotation$is_annotated[data_co_annotation$is_annotated >= overlap_length] <- 1
   
@@ -190,8 +188,10 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
   data.GIANT.entrez[1:top_n, 3] <- 1 # Set the top top_n to 1
   data.GIANT.entrez[(top_n+1):dim(data.GIANT.entrez)[1], 3] <- 0 # And the rest to 0
   
-  ## @importFrom org.Hs.eg.db org.Hs.egSYMBOL
-  ## --------------------------------------------------
+  
+  ## --------------- Entrez to Symbol -----------------
+  
+  ## Way 1: @importFrom org.Hs.eg.db org.Hs.egSYMBOL
   # Use an entrez to gene symbol mapping to convert this standard (in Entrez) to usable with FLEX (in Symbol)
   genes.entrezID <- sort(unique(union(data.GIANT.entrez[,1], data.GIANT.entrez[,2])))
   genes.entrez.str <- sapply(genes.entrezID, toString) # as.character(genes.entrezID)
@@ -202,7 +202,23 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
   xx <- as.list(x[mapped_genes])
   
   # *** The rownames are entrez IDs and the values are gene symbols
-  gene.entrez.to.symbol <- unlist(xx[genes.entrez.str])
+  gene.entrez.to.symbol.2 <- unlist(xx[genes.entrez.str]) # No NA in here # 24177
+  
+  ## Way 2: Use pre-downloaded data!
+  entrez_file <- '/project/chadm/Mahfuz/Database/Mapping/Gene_symbol_Entrez_ID.txt'
+  symbol_entrez <- read.table(entrez_file, header=TRUE, stringsAsFactors=FALSE, sep="\t", quote='', fill = TRUE)
+  
+  ind.na <- which(is.na(symbol_entrez[,3]) | is.nan(symbol_entrez[,3]))
+  symbol_entrez <- symbol_entrez[-ind.na,] # 37465
+  
+  ind <- order(symbol_entrez[,1]) # Sort by gene symbols (not necessary)
+  symbol_entrez = symbol_entrez[ind,]
+  
+  gene.entrez.to.symbol <- symbol_entrez[,1] # gene symbols
+  names(gene.entrez.to.symbol) <- symbol_entrez[,3] # entrez IDs
+  
+  # Comment: Both mapping seems good to me! Should use Way 1!
+  
   
   ## --------------------------------------------------
   #  Now convert the data from entrez ID format to gene format
@@ -214,12 +230,15 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
     ind <- order(data.standard$gene2)
     data.standard <- data.standard[ind,]
   }
-  
   ind <- order(data.standard$gene1)
   data.standard <- data.standard[ind,]
   
   # Group the pairs by gene1
   gene.indices <- GroupUniqueElements(data.standard$gene1)
+  gene.names.entrez <- row.names(gene.indices)
+  
+  # identical(row.names(gene.indices), as.character(data.standard[gene.indices[,1],1])) # TRUE
+  # basically the row.names is a string version of the entrez ID of those genes
   
   # Now create a new data replacing the entrezIDs by gene symbols
   # The size should not exceed the original data (may reduce in absence of matching)
@@ -228,33 +247,40 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
   is.annotated <- numeric(dim(data.standard)[1])
   
   curr.ind <- 1 # Track the progress
-  
-  for (i in row.names(gene.indices)){
-    # i <- row.names(gene.indices)[1]
+  # count <- 1
+  for (i in gene.names.entrez){
+    # i <- gene.names.entrez[1]
     
     # This entrez ID doesn't have an associated gene_symbol
     if (!(i %in% names(gene.entrez.to.symbol))){
       next
     }
+    # count <- count + 1
     
     ## ---------- Get the symbol for first gene ----------
-    std.first.gene <- gene.entrez.to.symbol[i]
+    # Accessing by the chr version of entrez ID
+    first.gene.symbol <- gene.entrez.to.symbol[i] ## Entry 1 (replicated)
     
     # Now get the corresponding second genes and their associations
-    indices.i <- gene.indices[i,1] : gene.indices[i,2]
-    sec.genes.entrez <- as.character(data.standard$gene2[indices.i])
+    indices.i <- gene.indices[i,1] : gene.indices[i,2] # 1096
+    sec.genes.entrez.cand <- as.character(data.standard$gene2[indices.i])
     co.ann.values.cand <- data.standard$is_annotated[indices.i]
     
     ## ---------- Get the symbol for second genes ----------
-    # Remove the genes that don't have an entrez to symbol mapping
+    # We need to remove the NA's (present in entrez, but no mapping!)
     # sum(sec.genes.entrez %in% names(gene.entrez.to.symbol))
-    sec.genes.entrez.cand <- sec.genes.entrez[sec.genes.entrez %in% names(gene.entrez.to.symbol)]
-    std.second.genes <- gene.entrez.to.symbol[sec.genes.entrez.cand]
+    sec.genes.entrez <- sec.genes.entrez.cand[sec.genes.entrez.cand %in% names(gene.entrez.to.symbol)] # 811
+    second.genes.symbol <- gene.entrez.to.symbol[sec.genes.entrez] ## Entry: 2
     
     ## ---------- Now get the corresponding annotation ----------
-    common.genes <- intersect(sec.genes.entrez, sec.genes.entrez.cand)
-    ind <- match(common.genes, sec.genes.entrez)
-    co.ann.values <- co.ann.values.cand[ind]
+    common.genes.entrez <- intersect(sec.genes.entrez, sec.genes.entrez.cand)
+    ind <- match(common.genes.entrez, sec.genes.entrez.cand)
+    co.ann.values <- co.ann.values.cand[ind] ## Entry: 3
+    
+    # Sanity check
+    # identical(i, as.character(unique(data.standard$gene1[indices.i[ind]])))
+    # identical(second.genes.symbol, gene.entrez.to.symbol[names(second.genes.symbol)]) # TRUE
+    # identical(co.ann.values, data.standard$is_annotated[indices.i[ind]]) # TRUE
     
     curr.size <- length(co.ann.values)
     
@@ -262,15 +288,15 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
     if (curr.size > 0){ 
       ind.to.fill <- curr.ind: (curr.ind + curr.size - 1)
       
-      gene1.symbol [ind.to.fill] <- rep(std.first.gene, length(ind.to.fill))
-      gene2.symbol [ind.to.fill] <- std.second.genes
+      gene1.symbol [ind.to.fill] <- rep(first.gene.symbol, length(ind.to.fill))
+      gene2.symbol [ind.to.fill] <- second.genes.symbol
       is.annotated [ind.to.fill] <- co.ann.values  
     }
     
     curr.ind <- curr.ind + curr.size # Update
   }
   
-  data.GIANT <- data.frame(gene1 = gene1.symbol, gene2 = gene2.symbol, is_annotated = is.annotated)
+  data.GIANT <- data.frame(gene1 = gene1.symbol, gene2 = gene2.symbol, is_annotated = is.annotated, stringsAsFactors = FALSE)
   data.GIANT <- data.GIANT[-(curr.ind : length(is.annotated)), ]
   
   # If there is any NA in the gene names (which shouldn't be the case)
@@ -278,6 +304,15 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
   if (length(ind.na) > 0){
     data.GIANT <- data.GIANT[-ind.na, ]
   }
+  
+  # Let's sort it first by gene2 and then by gene1 one more time
+  # It will take a lot of time, as gene1 and gene2 are strings now
+  if (is.unsorted(data.GIANT$gene2)){
+    ind <- order(data.GIANT$gene2)
+    data.GIANT <- data.GIANT[ind,]
+  }
+  ind <- order(data.GIANT$gene1)
+  data.GIANT <- data.GIANT[ind,]
   
   return (data.GIANT)
 }

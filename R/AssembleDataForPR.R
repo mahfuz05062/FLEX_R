@@ -106,7 +106,7 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
       # pairwise.correlation <- (as.matrix(data.interaction)) %*% t(as.matrix(data.interaction)) # Found all to be NaN!!!
       
     }else{
-      pairwise.correlation <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson') # Fast  
+      pairwise.correlation <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson') # Fast
     }
     
     ## *** TODO: Add inner product as the similarity for cases where we have a lot of NaNs or smaller profile size
@@ -144,8 +144,8 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   
   ## Probable Speedup: Not use rownames directly, but find some numeric representation
   int.genes.in.std <- intersect(gene.symbol, unique.names.genes)
-  ind.int.genes.in.std <- match(int.genes.in.std, gene.symbol)
-  # identical(gene.symbol[ind.int.genes.in.std], int.genes.in.std) # sanity-check
+  ind.int.genes.in.std <- match(int.genes.in.std, gene.symbol) # 17144
+  # identical(gene.symbol[ind.int.genes.in.std], int.genes.in.std) # TRUE
   
   curr.ind <- 1 # Track the progress
   print('Mapping pairs against their correlation values ... ')
@@ -157,7 +157,7 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   ## Main Processing ==============================================
   #  Loop through all library genes that are also in the standard
   
-  for (i in ind.int.genes.in.std){ # Max value of i is length.corr (both integer)
+  for (i in ind.int.genes.in.std){ # i is the indices in interaction data
     curr.unique.gene <- gene.symbol[i]
     
     ## *** The last row doesn't matter, as we have already covered the gene.
@@ -184,6 +184,7 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
     values.predicted <- data.corr[common.genes]
     curr.size <- length(values.true)
     
+    print(curr.size)
     # print(paste(i, length(values.true), sep = ' '))
     
     if (curr.size > 0){ # R will produce an error otherwise
@@ -245,6 +246,7 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   } else{
     return(list(true = combined.true, predicted = combined.score, index = indices.in.standard))
   }
+  
 }
 
 
