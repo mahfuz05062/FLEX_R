@@ -182,8 +182,15 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
   # Read the downloaded data (R can read a .gz file as a text file, if it indeed is a text file)
   data.GIANT.entrez <- read.table(file_location,  header = F, sep = '\t', quote = '', stringsAsFactors = F)
   
-  ## @importFrom org.Hs.eg.db org.Hs.egSYMBOL
+  ## Binarize the data.GIANT.entrez standard (2.5% positives)
+  top_n <- 1000000
+  ind = order(data.GIANT.entrez[,3], decreasing=T)
+  data.GIANT.entrez = data.GIANT.entrez[ind,]
   
+  data.GIANT.entrez[1:top_n, 3] <- 1 # Set the top top_n to 1
+  data.GIANT.entrez[(top_n+1):dim(data.GIANT.entrez)[1], 3] <- 0 # And the rest to 0
+  
+  ## @importFrom org.Hs.eg.db org.Hs.egSYMBOL
   ## --------------------------------------------------
   # Use an entrez to gene symbol mapping to convert this standard (in Entrez) to usable with FLEX (in Symbol)
   genes.entrezID <- sort(unique(union(data.GIANT.entrez[,1], data.GIANT.entrez[,2])))
@@ -250,15 +257,18 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
     co.ann.values <- co.ann.values.cand[ind]
     
     curr.size <- length(co.ann.values)
-    ind.to.fill <- curr.ind: (curr.ind + curr.size - 1)
     
-    gene1.symbol [ind.to.fill] <- rep(std.first.gene, length(ind.to.fill))
-    gene2.symbol [ind.to.fill] <- std.second.genes
-    is.annotated [ind.to.fill] <- co.ann.values
+    # If curr.size is zero, ind.to.fill is not going to be empty, unlike Matlab
+    if (curr.size > 0){ 
+      ind.to.fill <- curr.ind: (curr.ind + curr.size - 1)
+      
+      gene1.symbol [ind.to.fill] <- rep(std.first.gene, length(ind.to.fill))
+      gene2.symbol [ind.to.fill] <- std.second.genes
+      is.annotated [ind.to.fill] <- co.ann.values  
+    }
     
     curr.ind <- curr.ind + curr.size # Update
   }
-  
   
   data.GIANT <- data.frame(gene1 = gene1.symbol, gene2 = gene2.symbol, is_annotated = is.annotated)
   data.GIANT <- data.GIANT[-(curr.ind : length(is.annotated)), ]
