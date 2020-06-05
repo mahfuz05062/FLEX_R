@@ -41,7 +41,26 @@ save(data_GO_BP, file = 'data_GO_BP.rda')
 
 ## 5. Download data for Functional network (GIANT)
 #  See 'MakeFuncNetFromGIANT' in GoldStandards.R
+# https://www.programmableweb.com/news/how-to-access-any-restful-api-using-r-language/how-to/2017/07/21
 
+# install.packages("httr")
+# install.packages("jsonlite")
+# require("httr")
+# require("jsonlite")
+
+# Getting the data
+# base <- 'https://hb.flatironinstitute.org/api/datasets' # Not this one (https://hb.flatironinstitute.org/data)
+
+# base <- 'https:/hb.flatironinstitute.org/api/integrations/'# We want networks
+# get_prices <- GET(base)
+# get_prices_text <- content(get_prices, "text")
+# get_prices_json <- fromJSON(get_prices_text, flatten = TRUE)
+# get_prices_df <- as.data.frame(get_prices_json)
+# out <- get_prices_df[which(get_prices_df$slug == 'global'), ]
+
+# How to get only the top edge file?
+# file_location <- '/project/chadm/Mahfuz/Database/Greene_et_al/Func_net/global_top.gz'
+# download.file(url='https://s3-us-west-2.amazonaws.com/humanbase/networks/global_top.gz', destfile = file_location, method='curl') # This is the direct link (but I would rather love to use the api to get this link!)
 
 
 ## ============================ ##

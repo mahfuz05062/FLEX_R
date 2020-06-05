@@ -168,18 +168,21 @@ MakeCoAnnotationFromGeneSymbols <- function(data_standard, overlap_length = 1, s
 #' 	data.ca <- MakeFuncNetFromGIANT(file_loc)
 #' 
 MakeFuncNetFromGIANT <- function(file_location = NULL){
-  # file_location <- '/home/mahfuz/Desktop/CRISPR/FLEX/R/Tests/Package_Test/Vignette_test/global_standard.txt'
+  # file_location <- '/home/mahfuz/Desktop/CRISPR/FLEX/R/Tests/Package_Test/Vignette_test/global_top_edges.txt'
+  # file_location <- '/project/chadm/Mahfuz/Database/Greene_et_al/Func_net/global_top.gz'
   
   if (!file.exists(file_location)){
-	message('Downloading GIANT data from http://giant.princeton.edu/static/standards/')
-    download.file(url='http://giant.princeton.edu/static/standards/global_standard.dat', 
-                  destfile = file_location, method='curl')    
+    message('Downloading GIANT data ...')
+    
+    # The following is the actual link of the file (located in: https://hb.flatironinstitute.org/download/global)
+    # The best way would be to download data using a RESTful API (https://hb.flatironinstitute.org)
+    download.file(url='https://s3-us-west-2.amazonaws.com/humanbase/networks/global_top.gz', destfile = file_location, method='curl')
   }
-
-   # Read the downloaded data
-   data.GIANT.entrez <- read.table(file_location,  header = F, sep = '\t', quote = '', stringsAsFactors = F)
-
-   ## @importFrom org.Hs.eg.db org.Hs.egSYMBOL
+  
+  # Read the downloaded data (R can read a .gz file as a text file, if it indeed is a text file)
+  data.GIANT.entrez <- read.table(file_location,  header = F, sep = '\t', quote = '', stringsAsFactors = F)
+  
+  ## @importFrom org.Hs.eg.db org.Hs.egSYMBOL
   
   ## --------------------------------------------------
   # Use an entrez to gene symbol mapping to convert this standard (in Entrez) to usable with FLEX (in Symbol)
