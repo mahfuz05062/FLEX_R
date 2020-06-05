@@ -120,6 +120,7 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
 # Supporting function for CalculatePredictionAndTrueOnLibraryProfiles
 FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   
+  ## Pre-processing ===================================
   # print('speed optimizations ...')
   length.corr <- dim(pairwise.correlation)[1]
   gene.symbol <- rownames(pairwise.correlation)
@@ -153,8 +154,16 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   pb <- txtProgressBar(style = 3) 
   pb_count <- 0
   
-  for (i in ind.int.genes.in.std){
+  ## Main Processing ==============================================
+  #  Loop through all library genes that are also in the standard
+  
+  for (i in ind.int.genes.in.std){ # Max value of i is length.corr (both integer)
     curr.unique.gene <- gene.symbol[i]
+    
+    ## *** The last row doesn't matter, as we have already covered the gene.
+    if (i == length.corr){
+      next # This basically means break in this case!
+    }
     
     ## Get standard data for this names.genes (with others associated with it)
     ind.pairs.in.std <- gene.indices[curr.unique.gene,1] : gene.indices[curr.unique.gene,2]
@@ -163,7 +172,7 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
     names(co.ann.values) <- std.second.genes
     
     # *** Considering only Upper triangle (both datasets must be sorted)
-    data.corr <- pairwise.correlation[i, (i+1) :length.corr] # parentheses is important
+    data.corr <- pairwise.correlation[i, (i+1) : length.corr] # parentheses is important
     sim.second.genes <- gene.symbol[(i+1) : length.corr]
     
     # system.time(sim.second.genes <- gene.symbol[(i+1) : length.corr]) # Faster
@@ -179,8 +188,8 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
     
     if (curr.size > 0){ # R will produce an error otherwise
       # Save true (co-annotation: 1/0) and predicted (pairwise similarity)
-      combined.true[curr.ind: (curr.ind + curr.size - 1)]  <-  values.true
-      combined.score[curr.ind: (curr.ind + curr.size - 1)] <-  values.predicted
+      combined.true[curr.ind : (curr.ind + curr.size - 1)]  <-  values.true
+      combined.score[curr.ind : (curr.ind + curr.size - 1)] <-  values.predicted
       
       # Save indices (to refer to data.standard to retrieve the gene pair symbols)
       values.indices <- ind.pairs.in.std
@@ -203,6 +212,12 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   }
   close(pb)
   
+  ## *** Logical error check
+  if (curr.ind < 2){
+    return (NULL)
+  }
+  
+  ## Post-processing ===================================
   ## Remove the unnecessary part of the data
   combined.true <- combined.true[1: (curr.ind - 1)]
   combined.score <- combined.score[1: (curr.ind - 1)]
@@ -236,6 +251,7 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
 # Supporting function for CalculatePredictionAndTrueOnLibraryProfiles
 FromGenePairSimilarity <- function(data.standard, data.interaction){
   
+  ## Pre-processing ===================================
   # Sort the co annotation data (data.standard)
   if (is.unsorted(data.standard$gene1)){
     ind <- order(data.standard$gene1)
@@ -270,8 +286,16 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
   # For pairwise corr, the last one won't be there
   print('Associating similarity values of pairs to pos(1) / neg(0) co-annotation ... ')
   pb <- txtProgressBar(style = 3) # Progress bar
-  for (i in ind.int.genes.in.std){    
+  
+  ## Main Processing ==============================================
+  #  Loop through all library genes that are also in the standard
+  for (i in ind.int.genes.in.std){
     curr.unique.gene <- unique.names.genes.sim[i]
+    
+    ## *** The last row doesn't matter, as we have already covered the gene.
+    if (i == length.corr){
+      next # This basically means break in this case!
+    }
     
     ## Get co-annotation values for all pairs of curr.unique.gene
     ind.pairs.in.std <- gene.indices.std[curr.unique.gene,1] : gene.indices.std[curr.unique.gene,2]
@@ -319,6 +343,12 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
   }
   close(pb)
   
+  ## *** Logical error check
+  if (curr.ind < 2){
+    return (NULL)
+  }
+  
+  ## Post-processing ===================================
   ## Remove the unnecessary part of the data
   combined.true <- combined.true[1: (curr.ind - 1)]
   combined.score <- combined.score[1: (curr.ind - 1)]
