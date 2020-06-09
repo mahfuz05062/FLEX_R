@@ -184,7 +184,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
              xlab = fig.labs[1], ylab = fig.labs[2], 
              lwd = 2, col = legend.color[i], lty = legend.ltype[i],
              cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4,
-             xaxt="n") # Not plotting x axis tick labels
+             font.main = 1, xaxt="n") # Not plotting x axis tick labels
         
         # Adding customized xtick labels
         # x.axis.ticks <- seq(1, (floor(log10(plot.xlim))), 1)
@@ -199,13 +199,13 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
         plot(data.x.axis, data.y.axis, xlim = c(10, plot.xlim), ylim = c(0, plot.ylim), 
              type = 'l', main = fig.title,
              bty = "L", # 'n' -> no box, nothing - all boxes
-             xlab = fig.labs[1], ylab = fig.labs[2], 
+             xlab = fig.labs[1], ylab = fig.labs[2], font.main = 1,
              lwd = 2, col = legend.color[i], lty = legend.ltype[i],
              cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4)
       }
     }
     else{ # For every other time
-      lines(data.x.axis, data.y.axis, col=legend.color[i], lwd = 2, lty = legend.ltype[i]) 
+      lines(data.x.axis, data.y.axis, col=legend.color[i], font.main = 1, lwd = 2, lty = legend.ltype[i]) 
     }
   }
   
