@@ -37,12 +37,14 @@
 #' @export
 
 PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
-                             neg.to.pos = FALSE, type.plot = 'log', 
+                             neg.to.pos = FALSE, 
+                             type.plot = 'log', is.bgdline = FALSE,
+                             provided.xlim = NULL, provided.ylim = NULL,
+                             legend.names = NULL, legend.color = c('blue'),
+                             legend.ltype = NULL,
                              fig.title = NULL, fig.labs = c('TP', 'Precision'),
-                             legend.names = NULL, legend.color = c('blue'), 
                              save.figure = FALSE, 
-                             outfile.name = 'test_PR_sim', outfile.type = 'pdf',
-                             is.bgdline = FALSE) {
+                             outfile.name = 'test_PR_sim', outfile.type = 'pdf') {
   
   ## *** Check input data format
   if(class(pred.ca) != 'list'){
@@ -114,35 +116,39 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
     }
   } # end for
   
-  ## *** Calculate the max y-lim and x-lim for the plots 
+  
+  ## *** Calculate the max y-lim and x-lim for the plots (if not provided)
   #  In R, we have to this beforehand as we are going to plot multiple lines
-  plot.xlim = -1
-  plot.ylim = -1
+    plot.xlim = -1
+    plot.ylim = -1
+    
+    for (i in 1 : length(plot.data)) {
+      tmp <- plot.data[[i]]
+      
+      ind.10 <- which(tmp$x == 9) # Remove data for TP < 10
+      
+      if (length(ind.10) > 0){ 
+        # The first 10 points are excluded from plotting
+        x <- max(tmp$x[-(1:ind.10[length(ind.10)])])
+        y <- max(tmp$y[-(1:ind.10[length(ind.10)])])
+      } else{ # What if it's not there?
+        x <- max(tmp$x)
+        y <- max(tmp$y)
+      }
+      
+      if (x > plot.xlim){
+        plot.xlim <- x
+      }
+      if (y > plot.ylim){
+        plot.ylim <- y
+      }
+    }
   
-  for (i in 1 : length(plot.data)) {
-    tmp <- plot.data[[i]]
+    if(!is.null(provided.xlim)) {plot.xlim <- provided.xlim}
+    if(!is.null(provided.ylim)) {plot.ylim <- provided.ylim}
     
-    ind.10 <- which(tmp$x == 9) # Remove data for TP < 10
-    
-    if (length(ind.10) > 0){ 
-      # The first 10 points are excluded from plotting
-      x <- max(tmp$x[-(1:ind.10[length(ind.10)])])
-      y <- max(tmp$y[-(1:ind.10[length(ind.10)])])
-    } else{ # What if it's not there?
-      x <- max(tmp$x)
-      y <- max(tmp$y)
-    }
-    
-    if (x > plot.xlim){
-      plot.xlim <- x
-    }
-    if (y > plot.ylim){
-      plot.ylim <- y
-    }
-  } # end for
-  
-  plot.xlim <- 10 ^ ceiling(log10(plot.xlim))
-  plot.ylim <- round(plot.ylim + 0.01, 2)
+    plot.xlim <- 10 ^ ceiling(log10(plot.xlim))
+    plot.ylim <- round(plot.ylim + 0.01, 2)
   
   ## *** Save to an output file
   if (save.figure == TRUE){
@@ -175,7 +181,8 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
              xlim = c(10, plot.xlim), ylim = c(0, plot.ylim),
              log = 'x', type = 'l', main = fig.title,
              bty = "L", # 'n' -> no box, nothing - all boxes
-             xlab = fig.labs[1], ylab = fig.labs[2], lwd = 2, col = legend.color[i], 
+             xlab = fig.labs[1], ylab = fig.labs[2], 
+             lwd = 2, col = legend.color[i], lty = legend.ltype[i],
              cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4,
              xaxt="n") # Not plotting x axis tick labels
         
@@ -192,17 +199,19 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
         plot(data.x.axis, data.y.axis, xlim = c(10, plot.xlim), ylim = c(0, plot.ylim), 
              type = 'l', main = fig.title,
              bty = "L", # 'n' -> no box, nothing - all boxes
-             xlab = fig.labs[1], ylab = fig.labs[2], lwd = 2, col = legend.color[i],
+             xlab = fig.labs[1], ylab = fig.labs[2], 
+             lwd = 2, col = legend.color[i], lty = legend.ltype[i],
              cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4)
       }
     }
     else{ # For every other time
-      lines(data.x.axis, data.y.axis, col=legend.color[i], lwd = 2) 
+      lines(data.x.axis, data.y.axis, col=legend.color[i], lwd = 2, lty = legend.ltype[i]) 
     }
   }
   
   if (!is.null(legend.names)){
-    legend("topright", legend = legend.names, fill = legend.color, 
+    legend("topright", legend = legend.names, 
+           fill = legend.color, lwd = 2, lty = legend.ltype[i],
            bty = "n", # to remove the box
            cex = 1.2, text.col = "black", horiz = F)
     
