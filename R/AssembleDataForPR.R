@@ -33,57 +33,58 @@
 #' 
 
 CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.interaction){
+  
   ## *** Check input data format
-  true_classes_count <- (class(data.standard) == 'data.frame') + (class(data.interaction) == 'data.frame' | class(data.interaction) == 'matrix')
+  true_classes_count <- ((class(data.standard) == 'data.frame') | (class(data.standard) == 'list')) + (class(data.interaction) == 'data.frame' | class(data.interaction) == 'matrix')
   if(true_classes_count < 2){
     stop ("Check the inputs again ... they are supposed to be data.frame's")
-    # stopifnot(true_classes_count < 3)
-    # print ("Check the inputs again ... they are supposed to be data.frame's")
-    # return (NULL)
   }
-
+  
   if (is.null(row.names(data.interaction[1,]))){
     stop ("data.interaction does not contain gene names as row names ...")
   }
-
+  
   ## *** Decide which function to call and prepare data for that!
   min_dim <- min(dim(data.interaction)[1], dim(data.interaction)[2])
   subset <- sort(sample(1:min_dim, min_dim / 10))
   
-  # 1. Pairwise data in the format of Gene1 Gene2 Similarity
+  # *** 1. Pairwise data in the format of Gene1 Gene2 Similarity
   if (dim(data.interaction)[2] == 3) {
-    
     # We want to check the data types for this format
-    if ((typeof(data.interaction[1,1]) == 'character') & (typeof(data.interaction[1,2]) == 'character') & 
+    if ((typeof(data.interaction[1,1]) == 'character') & 
+        (typeof(data.interaction[1,2]) == 'character') & 
         (typeof(data.interaction[1,3]) == 'double')){
+      
       print('Similarity data provided ... calling FromGenePairSimilarity ...')
-      return (FromGenePairSimilarity(data.standard, data.interaction))
+      
+      # Use Symbol or Entrez ID (for GIANT)
+      if (class(data.standard) == 'list'){
+        return (FromGenePairSimilarityEntrez(data.standard, data.interaction))
+      } else{
+        return (FromGenePairSimilarity(data.standard, data.interaction))
+      }
+      
     } else{
       print('ill-formatted data .. quitting ...')
       return(NULL)
     }
     
   } else if ( (dim(data.interaction)[1] == dim(data.interaction)[2]) & 
-       isSymmetric(as.matrix(data.interaction[subset, subset]))) {
-    # 2. Pairwise correlation / similarity data provided as a square matrix    
+              isSymmetric(as.matrix(data.interaction[subset, subset]))) {
+    # *** 2. Pairwise correlation / similarity data provided as a square matrix    
     # Check: 1. Square, 2. Symmetric (We are using a random subset to reduce memory footprint)
     print('Pairwise correlation/similarity matrix provided ...')
     
-    # Sort the pairwise data by gene names (we need to do it on both row and column side)
+    # Sort the pairwise data by gene names (on both rows and columns)
     if (is.unsorted(rownames(data.interaction))){
-      gene.names <- rownames(data.interaction) # Names are already associated to the rows and columns
+      gene.names <- rownames(data.interaction)
       ind <- order(gene.names)
       data.interaction <- data.interaction[ind,ind]      
     }
-    
-    pairwise.correlation <- as.matrix(data.interaction)
-    rm(data.interaction) # Not needed anymore (It's a 17K * 17K matrix here, so might be a bottleneck in low RAM pcs)
-    gc()
-    
-    return (FromAllPairwiseCorrelation(data.standard, pairwise.correlation))
+    data.interaction <- as.matrix(data.interaction) # This is pairwise.corr
     
   } else{ 
-    # 3. Genes (row) * screens (column) matrix provided (GI or fitness, for example)
+    # *** 3. Genes (row) * screens (column) matrix provided (GI or fitness, for example)
     # Calculate pairwise.correlation
     
     # Sort the interaction.data by gene names (library side)
@@ -100,20 +101,22 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     percent.nan <- sum(is.nan(as.matrix(data.interaction))) / (dim(data.interaction)[1] * dim(data.interaction)[2])
     
     if (percent.nan > 0.1){ # If we have more than 20% NaNs in the data
-      pairwise.correlation <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson') # Slow, and really unstable (for sparse data)
+      data.interaction <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson') # Slow, and really unstable (for sparse data)
       
       ## *** TODO: Use inner product
-      # pairwise.correlation <- (as.matrix(data.interaction)) %*% t(as.matrix(data.interaction)) # Found all to be NaN!!!
-      
     }else{
-      pairwise.correlation <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson') # Fast
+      data.interaction <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson') # Fast
     }
-    
-    ## *** TODO: Add inner product as the similarity for cases where we have a lot of NaNs or smaller profile size
-
-    rm(data.interaction)
-    return (FromAllPairwiseCorrelation(data.standard, pairwise.correlation))
+    # pairwise.correlation <- data.interaction
   }
+  
+  # Use Symbol or Entrez ID (for GIANT)
+  if (class(data.standard) == 'list'){
+    return (FromAllPairwiseCorrelationEntrez(data.standard, data.interaction))
+  } else{
+    return (FromAllPairwiseCorrelation(data.standard, data.interaction))
+  }
+  
 }
 
 
@@ -147,6 +150,11 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   ind.int.genes.in.std <- match(int.genes.in.std, gene.symbol) # 17144
   # identical(gene.symbol[ind.int.genes.in.std], int.genes.in.std) # TRUE
   
+  
+  ## Main Processing ==============================================
+  #  Loop through all library genes that are also in the standard
+  count <- 0
+  
   curr.ind <- 1 # Track the progress
   print('Mapping pairs against their correlation values ... ')
   
@@ -154,10 +162,7 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   pb <- txtProgressBar(style = 3) 
   pb_count <- 0
   
-  ## Main Processing ==============================================
-  #  Loop through all library genes that are also in the standard
-  
-  for (i in ind.int.genes.in.std){ # i is the indices in interaction data
+  for (i in ind.int.genes.in.std){ # i -> index of gene in data.interaction
     curr.unique.gene <- gene.symbol[i]
     
     ## *** The last row doesn't matter, as we have already covered the gene.
@@ -171,9 +176,17 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
     co.ann.values <- data.standard[ind.pairs.in.std, 3]
     names(co.ann.values) <- std.second.genes
     
-    # *** Considering only Upper triangle (both datasets must be sorted)
-    data.corr <- pairwise.correlation[i, (i+1) : length.corr] # parentheses is important
-    sim.second.genes <- gene.symbol[(i+1) : length.corr]
+    # *** Way1 : Considering only Upper triangle (both datasets must be sorted)
+    # data.corr <- pairwise.correlation[i, (i+1) : length.corr] # parentheses is important
+    # sim.second.genes <- gene.symbol[(i+1) : length.corr]
+    # print(length(intersect(sim.second.genes, std.second.genes)))
+    
+    # *** Way2: Consdering whole
+    # Because for standards not created by us, like GIANT, we may lose some pairs! 
+    # Problem: If the standard has duplicate pairs, they will affect the PR performance.
+    data.corr <- pairwise.correlation[i, ]
+    sim.second.genes <- names(data.corr) # This works too!
+    # print(length(intersect(sim.second.genes, std.second.genes)))
     
     # system.time(sim.second.genes <- gene.symbol[(i+1) : length.corr]) # Faster
     # system.time(sim.second.genes <- gene.symbol[-(1:i)])
@@ -184,7 +197,7 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
     values.predicted <- data.corr[common.genes]
     curr.size <- length(values.true)
     
-    print(curr.size)
+    # print(curr.size)
     # print(paste(i, length(values.true), sep = ' '))
     
     if (curr.size > 0){ # R will produce an error otherwise
@@ -203,6 +216,7 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
         names(co.ann.IDs) <- std.second.genes
         source[curr.ind: (curr.ind + curr.size - 1)] <- co.ann.IDs[common.genes]
       }
+      count <- count + 1
     }
     
     curr.ind <- curr.ind + curr.size # Update
@@ -220,7 +234,7 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   
   ## Post-processing ===================================
   ## Remove the unnecessary part of the data
-  combined.true <- combined.true[1: (curr.ind - 1)]
+  combined.true <- combined.true[1: (curr.ind - 1)] # 7220816 (GIANT) (the other way gives 7235130)
   combined.score <- combined.score[1: (curr.ind - 1)]
   indices.in.standard <- indices.in.standard[1: (curr.ind - 1)]
   
@@ -239,6 +253,9 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
       source <- source[-ind.na]
     }
   }
+  
+  # Sanity check (should be TRUE)
+  # identical(combined.true, data.standard[indices.in.standard,3])
   
   # Return outputs as a list
   if (dim(data.standard)[2] == 4){
@@ -321,7 +338,7 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
     values.true <- co.ann.values[common.genes]
     values.predicted <- similarity.values[common.genes]    
     curr.size <- length(values.true)
-
+    
     if (curr.size > 0){ # R will produce an error otherwise
       combined.true[curr.ind: (curr.ind + curr.size - 1)]  <-  values.true
       combined.score[curr.ind: (curr.ind + curr.size - 1)] <-  values.predicted
@@ -340,7 +357,6 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
     }    
     
     curr.ind <- curr.ind + curr.size # Update
-    
     setTxtProgressBar(pb, i/length(ind.int.genes.in.std)) # Progress bar update
   }
   close(pb)
@@ -396,11 +412,11 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
 #' @export
 #' 
 CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.interaction){
-
+  
   ## Subset the data using unique query genes (if not already provided) 
   queries <- unlist(lapply(strsplit(colnames(data.interaction), '_'), '[[', 1) ) # Get the first element of the list (strings separated by '_')
   queries_unique <- unique(queries)
-
+  
   # If there are multiple replicates, we are taking the first unique one  
   indices <- match(queries_unique, queries)
   data.interaction <- data.interaction[,indices]
@@ -408,7 +424,7 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   queries.original <- colnames(data.interaction)
   colnames(data.interaction) <- queries # queries.original[indices]
   queries.full <- queries.original[indices] # Complete names of the query
-
+  
   ## PR Curve for each query screen (using numeric interaction data)
   combined.true.neg <- c()
   combined.score.neg <- c()
@@ -537,4 +553,278 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   AUC.pos.summary <- AUC.pos.summary[ind]
   
   return(list(data = combined.neg, queries = Queries.with.AUC, auc.neg.query = AUC.neg.summary, auc.pos.query = AUC.pos.summary))
+}
+
+
+
+## ==============================================================================
+##          Standard in Entrez, interaction in Symbol
+## ==============================================================================
+# Supporting function for CalculatePredictionAndTrueOnLibraryProfiles
+FromAllPairwiseCorrelationEntrez <- function(data.standard, pairwise.correlation){
+  
+  ## Pre-processing ===================================
+  if (class(data.standard) == 'list'){
+    ## Get the groupings
+    gene.indices <- data.standard$gene.indices # sorted by entrez ID
+    unique.genes.std.entrez <- row.names(gene.indices)
+    
+    ## Get the mappings
+    mapping <- data.standard$mapping
+    unique.genes.std.symbol <- mapping[row.names(gene.indices)]
+    
+    ## Main data
+    data.ca <- data.standard$data
+  } else{
+    stop('Expects mapping information ....')
+  }
+  
+  # Convert the Gene symbols to Entrez
+  # length.corr <- dim(pairwise.correlation)[1]
+  common.genes <- intersect(rownames(pairwise.correlation), mapping) 
+  pairwise.correlation <- pairwise.correlation[common.genes, common.genes]
+  gene.symbol <- rownames(pairwise.correlation) # 17206 (out of 17634)
+  
+  ## Speedup: Not use rownames directly, but find some numeric representation
+  common.genes <- intersect(gene.symbol, unique.genes.std.symbol) # 17148
+  ind.int.genes <- match(common.genes, gene.symbol)
+  ind.std.genes <- match(common.genes, unique.genes.std.symbol)
+  # points to genes alphabetically "A1BG" "A1CF" "A2M" "A2ML1" etc.
+  
+  ## Main Processing ==============================================
+  print('Mapping pairs against their correlation values ... ')
+  count <- 0
+  
+  combined.true <- numeric(dim(data.ca)[1]) 
+  combined.score <- numeric(dim(data.ca)[1])
+  indices.in.standard <- numeric(dim(data.ca)[1])
+  
+  curr.ind <- 1 # Track the progress
+  
+  pb <- txtProgressBar(style = 3) # Progress bar
+  pb_count <- 0
+  
+  for (i in seq_along(ind.int.genes)){ # i -> index of gene in data.interaction
+    
+    # GREAT !!! Getting values for same genes from both
+    # i <- seq_along(ind.int.genes)
+    # ind.int.genes[i] # gene index here
+    # gene.symbol[ind.int.genes[i]] # gene symbols
+    # ind.std.genes[i] # entrez ID
+    # mapping[row.names(gene.indices)[ind.std.genes[i]]]
+    # identical(gene.symbol[ind.int.genes[i]], unname(mapping[row.names(gene.indices)[ind.std.genes[i]]])) # TRUE
+    
+    # i <- 3 # 'A2M'
+    
+    curr.int.gene <- ind.int.genes[i] # apply as indices to pairwise.correlation
+    curr.std.gene <- ind.std.genes[i] # appy as indices to gene.indices
+    
+    ## Get genes associated to curr.std.gene
+    ind.pairs.in.std <- gene.indices[curr.std.gene,1] : gene.indices[curr.std.gene,2] # unique(data.ca[ind.pairs.in.std,1])
+    std.second.genes <- mapping[as.character(data.ca[ind.pairs.in.std, 2])]
+    
+    non.na.ind <- !is.na(std.second.genes) # There maybe some NA's (no mapping)
+    std.second.genes <- std.second.genes[non.na.ind]
+    # sum(non.na.ind) # length(non.na.ind)
+    
+    values.indices <- ind.pairs.in.std[non.na.ind] # Indices of non-NA data from std
+    names(values.indices) <- std.second.genes
+    # identical(mapping[as.character(data.ca[values.indices,2])], std.second.genes)
+    
+    co.ann.values <- data.ca[values.indices, 3]
+    names(co.ann.values) <- std.second.genes
+    
+    ## Get the interaction data
+    data.corr <- pairwise.correlation[curr.int.gene, ]
+    int.second.genes <- names(data.corr)
+    
+    ## Assign the true lables (1,0) from the functional standard
+    common.genes <- intersect(int.second.genes, std.second.genes)
+    curr.size <- length(common.genes)
+    
+    # print(paste(unique.genes.std.entrez[curr.std.gene], curr.size, sep = ' '))
+    
+    if (curr.size <= 0){ next }
+    
+    combined.true[curr.ind:(curr.ind+curr.size-1)]  <-  co.ann.values[common.genes] # 1/0
+    combined.score[curr.ind:(curr.ind+curr.size-1)] <-  data.corr[common.genes] # Corr
+    indices.in.standard[curr.ind:(curr.ind+curr.size-1)] <- values.indices[common.genes]
+      
+    count <- count + 1
+    curr.ind <- curr.ind + curr.size # Update
+    
+    pb_count <- pb_count + 1 # Progress bar update
+    setTxtProgressBar(pb, pb_count/length(ind.int.genes))
+  }
+  close(pb)
+  
+  ## *** Logical error check
+  if (curr.ind < 2){
+    return (NULL)
+  }
+  
+  ## Post-processing ===================================
+  combined.true <- combined.true[1: (curr.ind - 1)]
+  combined.score <- combined.score[1: (curr.ind - 1)]
+  indices.in.standard <- indices.in.standard[1: (curr.ind - 1)]
+  
+  ## Remove the na correlation values and corresponding interactions
+  ind.na <- which(is.na(combined.score) | is.nan(combined.score))
+  if (length(ind.na) > 0){
+    combined.score <- combined.score[-ind.na]
+    combined.true <- combined.true[-ind.na]
+    indices.in.standard <- indices.in.standard[-ind.na]
+  }
+  
+  # Return outputs as a list
+    return(list(true = combined.true, predicted = combined.score, index = indices.in.standard))
+  
+  # Sanity Check! It's working !!!
+  # data.out <- data.frame(true = combined.true, predicted = combined.score, index = indices.in.standard)
+  # identical(data.out$true, data.ca[data.out$index, 3]) # TRUE
+  # pairwise.correlation[mapping[as.character(data.ca[head(data.out)$index,]$gene1)],mapping[as.character(data.ca[head(data.out)$index,]$gene2)]]
+  # pairwise.correlation[mapping[as.character(data.ca[tail(data.out)$index,]$gene1)],mapping[as.character(data.ca[tail(data.out)$index,]$gene2)]]
+  
+  # Profile_DepMap_19Q2 = list(true = combined.true, predicted = combined.score, index = indices.in.standard)
+  # pred.ca <- list(test = list(true = Profile_DepMap_19Q2$true, predicted = Profile_DepMap_19Q2$predicted))
+  # PlotPRSimilarity (pred.ca, subsample = TRUE, type.plot = 'log', fig.title = paste0('Profile Similarity (GIANT)'), legend.names = c('19Q2'), legend.color = c('#756bb1'), save.figure = TRUE, outfile.name = paste0('DepMap_19Q2_Profile'),  outfile.type = 'png')
+}
+
+
+# Supporting function for CalculatePredictionAndTrueOnLibraryProfiles
+FromGenePairSimilarityEntrez <- function(data.standard, data.interaction){
+  
+  ## Pre-processing ===================================
+  if (class(data.standard) == 'list'){
+    ## Get the groupings
+    gene.indices <- data.standard$gene.indices # sorted by entrez ID
+    unique.genes.std.entrez <- row.names(gene.indices)
+    
+    ## Get the mappings
+    mapping <- data.standard$mapping
+    unique.genes.std.symbol <- mapping[row.names(gene.indices)]
+    
+    ## Main data
+    data.ca <- data.standard$data
+  } else{
+    stop('Expects mapping information ....')
+  }
+
+
+  
+  # Sort the co annotation data (data.standard)
+  if (is.unsorted(data.standard$gene1)){
+    ind <- order(data.standard$gene1)
+    data.standard <- data.standard[ind,]
+  }
+  system.time(out <- GroupUniqueElements(data.standard$gene1))
+  gene.indices.std <- out 
+  unique.names.genes.std <- row.names(out)
+  
+  # Now sort the similarity data by gene pairs
+  if (is.unsorted(data.interaction[,1])){
+    ind <- order(data.interaction[,1])
+    data.interaction <- data.interaction[ind,]
+  }
+  out <- GroupUniqueElements(data.interaction[,1])
+  gene.indices.sim <- out 
+  unique.names.genes.sim <- row.names(out)
+  
+  # Fill out similarity values and corresponding co-annotation (1/0) for each
+  # common gene pairs between similarity and co-annotation
+  combined.true <- numeric(dim(data.standard)[1]) # 0 - default/ initialization value
+  combined.score <- numeric(dim(data.standard)[1])
+  source <- vector('character', dim(data.standard)[1])
+  indices.in.standard <- numeric(dim(data.standard)[1])
+  
+  ## Speedup: Instead of using rownames directly, find a numeric representation
+  int.genes.in.std <- intersect(unique.names.genes.sim, unique.names.genes.std)
+  ind.int.genes.in.std <- match(int.genes.in.std, unique.names.genes.sim)
+  
+  curr.ind <- 1 # Track the progress
+  
+  # For pairwise corr, the last one won't be there
+  print('Associating similarity values of pairs to pos(1) / neg(0) co-annotation ... ')
+  pb <- txtProgressBar(style = 3) # Progress bar
+  
+  ## Main Processing ==============================================
+  #  Loop through all library genes that are also in the standard
+  for (i in ind.int.genes.in.std){
+    curr.unique.gene <- unique.names.genes.sim[i]
+    
+    ## *** The last row doesn't matter, as we have already covered the gene.
+    if (i == length.corr){
+      next # This basically means break in this case!
+    }
+    
+    ## Get co-annotation values for all pairs of curr.unique.gene
+    ind.pairs.in.std <- gene.indices.std[curr.unique.gene,1] : gene.indices.std[curr.unique.gene,2]
+    std.second.genes <- data.standard[ind.pairs.in.std, 2]
+    co.ann.values <- data.standard[ind.pairs.in.std, 3]
+    names(co.ann.values) <- std.second.genes
+    
+    ## Get similarity data for all pairs of curr.unique.gene
+    ind.sim <- gene.indices.sim[i,1] : gene.indices.sim[i,2]
+    similarity.values <- data.interaction[ind.sim, 3]
+    names(similarity.values) <- data.interaction[ind.sim, 2]
+    
+    # Remove the nan correlation values and corresponding interactions
+    ind.nan <- which(is.nan(similarity.values)) # Get the indices of NA's
+    if (length(ind.nan) > 0){
+      similarity.values <- similarity.values[-ind.nan]
+    }
+    
+    ## Assign the true lables (1,0) from the functional standard
+    common.genes <- intersect(names(similarity.values), std.second.genes)
+    values.true <- co.ann.values[common.genes]
+    values.predicted <- similarity.values[common.genes]    
+    curr.size <- length(values.true)
+    
+    if (curr.size > 0){ # R will produce an error otherwise
+      combined.true[curr.ind: (curr.ind + curr.size - 1)]  <-  values.true
+      combined.score[curr.ind: (curr.ind + curr.size - 1)] <-  values.predicted
+      
+      # Save indices (to refer to data.standard to retrieve the gene pair symbols)
+      values.indices <- ind.pairs.in.std
+      names(values.indices) <- std.second.genes
+      indices.in.standard[curr.ind: (curr.ind + curr.size - 1)] <- values.indices[common.genes]
+      
+      # If the ID of the pair (which complex/PW it belongs) is provided
+      if (dim(data.standard)[2] == 4){
+        co.ann.IDs <- data.standard[ind.pairs.in.std, 4]
+        names(co.ann.IDs) <- std.second.genes
+        source[curr.ind: (curr.ind + curr.size - 1)] <- co.ann.IDs[common.genes]
+      }
+    }    
+    
+    curr.ind <- curr.ind + curr.size # Update
+    setTxtProgressBar(pb, i/length(ind.int.genes.in.std)) # Progress bar update
+  }
+  close(pb)
+  
+  ## *** Logical error check
+  if (curr.ind < 2){
+    return (NULL)
+  }
+  
+  ## Post-processing ===================================
+  ## Remove the unnecessary part of the data
+  combined.true <- combined.true[1: (curr.ind - 1)]
+  combined.score <- combined.score[1: (curr.ind - 1)]
+  indices.in.standard <- indices.in.standard[1: (curr.ind - 1)]
+  
+  ## Remove the na correlation values and corresponding interactions
+  ind.na <- which(is.na(combined.score) | is.nan(combined.score))
+  if (length(ind.na) > 0){
+    combined.score <- combined.score[-ind.na]
+    combined.true <- combined.true[-ind.na]
+    indices.in.standard <- indices.in.standard[-ind.na]
+  }
+  
+  # Returning as a list
+  if (dim(data.standard)[2] == 4){
+    return(list(true = combined.true, predicted = combined.score, ID = source, index = indices.in.standard))  
+  } else{
+    return(list(true = combined.true, predicted = combined.score, index = indices.in.standard))
+  }
 }

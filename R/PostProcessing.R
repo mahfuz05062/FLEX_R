@@ -112,7 +112,6 @@ GetAreaUnderPRCurveForEntities <- function (summary.standard, data.standard, ent
   # sum(stri_detect(data_subset$source, fixed = to.match))
   # data_subset$source[stri_detect(data_subset$source, fixed = to.match)]
   
-  # print('Functional Diversity ...')
   pb <- txtProgressBar(style = 3) # Progress bar
   for (i in matched.ind){
     # print(i)

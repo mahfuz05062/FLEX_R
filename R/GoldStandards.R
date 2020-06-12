@@ -183,136 +183,172 @@ MakeFuncNetFromGIANT <- function(file_location = NULL){
   ## Binarize the data.GIANT.entrez standard (2.5% positives)
   top_n <- 1000000
   ind = order(data.GIANT.entrez[,3], decreasing=T)
-  data.GIANT.entrez = data.GIANT.entrez[ind,]
   
-  data.GIANT.entrez[1:top_n, 3] <- 1 # Set the top top_n to 1
-  data.GIANT.entrez[(top_n+1):dim(data.GIANT.entrez)[1], 3] <- 0 # And the rest to 0
+  data.GIANT.entrez[,3] <- 0 # Set everything to zero
+  data.GIANT.entrez[ind[1:top_n], 3] <- 1 # Set the top top_n (with higest association) to 1  
+  names(data.GIANT.entrez) <- c('gene1', 'gene2', 'is_annotated')
   
+  ind <- order(data.GIANT.entrez$gene1)
+  data.GIANT.entrez <- data.GIANT.entrez[ind,]
+  gene.indices <- GroupUniqueElements(data.GIANT.entrez$gene1) # Group the standard by gene names (first column 'gene1')
   
-  ## --------------- Entrez to Symbol -----------------
-  
-  ## Way 1: @importFrom org.Hs.eg.db org.Hs.egSYMBOL
+  ## --------------- Gene Mapping: Entrez to Symbol -----------------
+  ## *** Way 1: @importFrom org.Hs.eg.db org.Hs.egSYMBOL
+  # https://stuff.mit.edu/afs/athena/software/r/current/arch/i386_linux26/lib/R/library/org.Hs.eg.db/html/org.Hs.egSYMBOL.html
   # Use an entrez to gene symbol mapping to convert this standard (in Entrez) to usable with FLEX (in Symbol)
-  genes.entrezID <- sort(unique(union(data.GIANT.entrez[,1], data.GIANT.entrez[,2])))
-  genes.entrez.str <- sapply(genes.entrezID, toString) # as.character(genes.entrezID)
+  if (0){
+    genes.entrezID <- sort(unique(union(data.GIANT.entrez[,1], data.GIANT.entrez[,2])))
+    genes.entrez.str <- as.character(genes.entrezID) # sapply(genes.entrezID, toString)
+    
+    x <- org.Hs.eg.db::org.Hs.egSYMBOL
+    mapped_genes <- AnnotationDbi::mappedkeys(x)
+    xx <- as.list(x[mapped_genes])
+    gene.entrez.to.symbol <- unlist(xx[genes.entrez.str]) # 24177
+  }
   
-  # https://stuff.mit.edu/afs/athena/software/r/current/arch/i386_linux26/lib/R/library/org.Hs.eg.db/html/org.Hs.egSYMBOL.html  
-  x <- org.Hs.eg.db::org.Hs.egSYMBOL
-  mapped_genes <- AnnotationDbi::mappedkeys(x)
-  xx <- as.list(x[mapped_genes])
   
-  # *** The rownames are entrez IDs and the values are gene symbols
-  gene.entrez.to.symbol.2 <- unlist(xx[genes.entrez.str]) # No NA in here # 24177
-  
-  ## Way 2: Use pre-downloaded data!
+  ## *** Way 2: Use pre-downloaded data!
   entrez_file <- '/project/chadm/Mahfuz/Database/Mapping/Gene_symbol_Entrez_ID.txt'
   symbol_entrez <- read.table(entrez_file, header=TRUE, stringsAsFactors=FALSE, sep="\t", quote='', fill = TRUE)
-  
+
   ind.na <- which(is.na(symbol_entrez[,3]) | is.nan(symbol_entrez[,3]))
-  symbol_entrez <- symbol_entrez[-ind.na,] # 37465
-  
-  ind <- order(symbol_entrez[,1]) # Sort by gene symbols (not necessary)
+  symbol_entrez <- symbol_entrez[-ind.na,] # 37466 * 3
+
+  ind <- order(symbol_entrez[,1])
   symbol_entrez = symbol_entrez[ind,]
+
+  gene.entrez.to.symbol <- symbol_entrez[,1] # content: gene symbols
+  names(gene.entrez.to.symbol) <- symbol_entrez[,3] # index: entrez IDs
   
-  gene.entrez.to.symbol <- symbol_entrez[,1] # gene symbols
-  names(gene.entrez.to.symbol) <- symbol_entrez[,3] # entrez IDs
+  ## *** Remove the entrez ID's without gene symbol mapping
+  # unique.names.genes <- row.names(gene.indices)
+  # ind.na.mapping <- !is.na(gene.entrez.to.symbol[unique.names.genes])
   
-  # Comment: Both mapping seems good to me! Should use Way 1!
+  # gene.indices <- gene.indices[ind.na.mapping, ]
+  # gene.entrez.to.symbol <- gene.entrez.to.symbol[ind.na.mapping]
   
-  
-  ## --------------------------------------------------
-  #  Now convert the data from entrez ID format to gene format
-  data.standard <- data.GIANT.entrez
-  names(data.standard) <- c('gene1', 'gene2', 'is_annotated')
-  
-  # Sort the data by gene2 followed by gene1
-  if (is.unsorted(data.standard$gene2)){
-    ind <- order(data.standard$gene2)
-    data.standard <- data.standard[ind,]
-  }
-  ind <- order(data.standard$gene1)
-  data.standard <- data.standard[ind,]
-  
-  # Group the pairs by gene1
-  gene.indices <- GroupUniqueElements(data.standard$gene1)
-  gene.names.entrez <- row.names(gene.indices)
-  
-  # identical(row.names(gene.indices), as.character(data.standard[gene.indices[,1],1])) # TRUE
-  # basically the row.names is a string version of the entrez ID of those genes
-  
-  # Now create a new data replacing the entrezIDs by gene symbols
-  # The size should not exceed the original data (may reduce in absence of matching)
-  gene1.symbol <- vector('character', dim(data.standard)[1])
-  gene2.symbol <- vector('character', dim(data.standard)[1])
-  is.annotated <- numeric(dim(data.standard)[1])
-  
-  curr.ind <- 1 # Track the progress
-  # count <- 1
-  for (i in gene.names.entrez){
-    # i <- gene.names.entrez[1]
-    
-    # This entrez ID doesn't have an associated gene_symbol
-    if (!(i %in% names(gene.entrez.to.symbol))){
-      next
-    }
-    # count <- count + 1
-    
-    ## ---------- Get the symbol for first gene ----------
-    # Accessing by the chr version of entrez ID
-    first.gene.symbol <- gene.entrez.to.symbol[i] ## Entry 1 (replicated)
-    
-    # Now get the corresponding second genes and their associations
-    indices.i <- gene.indices[i,1] : gene.indices[i,2] # 1096
-    sec.genes.entrez.cand <- as.character(data.standard$gene2[indices.i])
-    co.ann.values.cand <- data.standard$is_annotated[indices.i]
-    
-    ## ---------- Get the symbol for second genes ----------
-    # We need to remove the NA's (present in entrez, but no mapping!)
-    # sum(sec.genes.entrez %in% names(gene.entrez.to.symbol))
-    sec.genes.entrez <- sec.genes.entrez.cand[sec.genes.entrez.cand %in% names(gene.entrez.to.symbol)] # 811
-    second.genes.symbol <- gene.entrez.to.symbol[sec.genes.entrez] ## Entry: 2
-    
-    ## ---------- Now get the corresponding annotation ----------
-    common.genes.entrez <- intersect(sec.genes.entrez, sec.genes.entrez.cand)
-    ind <- match(common.genes.entrez, sec.genes.entrez.cand)
-    co.ann.values <- co.ann.values.cand[ind] ## Entry: 3
-    
-    # Sanity check
-    # identical(i, as.character(unique(data.standard$gene1[indices.i[ind]])))
-    # identical(second.genes.symbol, gene.entrez.to.symbol[names(second.genes.symbol)]) # TRUE
-    # identical(co.ann.values, data.standard$is_annotated[indices.i[ind]]) # TRUE
-    
-    curr.size <- length(co.ann.values)
-    
-    # If curr.size is zero, ind.to.fill is not going to be empty, unlike Matlab
-    if (curr.size > 0){ 
-      ind.to.fill <- curr.ind: (curr.ind + curr.size - 1)
-      
-      gene1.symbol [ind.to.fill] <- rep(first.gene.symbol, length(ind.to.fill))
-      gene2.symbol [ind.to.fill] <- second.genes.symbol
-      is.annotated [ind.to.fill] <- co.ann.values  
-    }
-    
-    curr.ind <- curr.ind + curr.size # Update
-  }
-  
-  data.GIANT <- data.frame(gene1 = gene1.symbol, gene2 = gene2.symbol, is_annotated = is.annotated, stringsAsFactors = FALSE)
-  data.GIANT <- data.GIANT[-(curr.ind : length(is.annotated)), ]
-  
-  # If there is any NA in the gene names (which shouldn't be the case)
-  ind.na <- which(is.na(data.GIANT$gene2) | is.nan(data.GIANT$gene2))
-  if (length(ind.na) > 0){
-    data.GIANT <- data.GIANT[-ind.na, ]
-  }
-  
-  # Let's sort it first by gene2 and then by gene1 one more time
-  # It will take a lot of time, as gene1 and gene2 are strings now
-  if (is.unsorted(data.GIANT$gene2)){
-    ind <- order(data.GIANT$gene2)
-    data.GIANT <- data.GIANT[ind,]
-  }
-  ind <- order(data.GIANT$gene1)
-  data.GIANT <- data.GIANT[ind,]
-  
+  ## Comment: Both mapping seems good to me! Should use Way 1!
+  data.GIANT <- list(data = data.GIANT.entrez, gene.indices = gene.indices, mapping = gene.entrez.to.symbol)
+  # data.standard <- data.GIANT
+  # FromAllPairwiseCorrelationEntrez
   return (data.GIANT)
 }
+  
+  # if (0){
+  #   ## --------------------------------------------------
+  #   #  Now convert the data from entrez ID format to gene format
+  #   data.standard <- data.GIANT.entrez
+  #   names(data.standard) <- c('gene1', 'gene2', 'is_annotated')
+  #   
+  #   # Sort the data by gene2 followed by gene1 (entrez ID)
+  #   if (is.unsorted(data.standard$gene2)){ # This is not necessary
+  #     ind <- order(data.standard$gene2)
+  #     data.standard <- data.standard[ind,]
+  #   }
+  #   ind <- order(data.standard$gene1)
+  #   data.standard <- data.standard[ind,]
+  #   
+  #   ## *** Group the pairs by gene1 ================
+  #   gene.indices <- GroupUniqueElements(data.standard$gene1) # 25660 (total unique genes)
+  #   gene.names.entrez <- row.names(gene.indices)
+  #   
+  #   # We can remove the ones that don't have gene symbols and sort these by symbols
+  #   valid.ind <- gene.names.entrez %in% names(gene.entrez.to.symbol) ## 22870
+  #   gene.indices <- gene.indices[valid.ind,]
+  #   gene.names.entrez <- gene.names.entrez[valid.ind]
+  #   gene.names.symbol <- gene.entrez.to.symbol[gene.names.entrez] # should have no NA's
+  #   
+  #   # Also we can sort this by gene symbols, so that we don't have to sort later
+  #   ind <- order(gene.names.symbol)
+  #   gene.names.symbol <- gene.names.symbol[ind]
+  #   gene.indices <- gene.indices[ind,]
+  #   gene.names.entrez <- gene.names.entrez[ind]
+  #   
+  #   # identical(row.names(gene.indices), as.character(data.standard[gene.indices[,1],1])) # TRUE
+  #   # basically the row.names is a string version of the entrez ID of those genes
+  #   
+  #   ## *** Now create a new data replacing the entrezIDs by gene symbols
+  #   # The size should not exceed the original data (may reduce in absence of matching)
+  #   gene1.symbol <- vector('character', dim(data.standard)[1])
+  #   gene2.symbol <- vector('character', dim(data.standard)[1])
+  #   is.annotated <- numeric(dim(data.standard)[1])
+  #   
+  #   curr.ind <- 1 # Track the progress
+  #   count <- 0
+  #   
+  #   # Progress bar
+  #   pb <- txtProgressBar(style = 3) 
+  #   pb_count <- 0
+  #   
+  #   for (i in gene.names.entrez){
+  #     # i <- gene.names.entrez[1]
+  #     
+  #     # This entrez ID doesn't have an associated gene_symbol
+  #     if (!(i %in% names(gene.entrez.to.symbol))){
+  #       next
+  #     }
+  #     count <- count + 1
+  #     
+  #     ## ---------- Get the symbol for first gene ----------
+  #     # Accessing by the chr version of entrez ID
+  #     first.gene.symbol <- gene.entrez.to.symbol[i] ## Entry 1 (replicated)
+  #     
+  #     # Now get the corresponding second genes and their associations
+  #     indices.i <- gene.indices[i,1] : gene.indices[i,2] # 1096
+  #     sec.genes.entrez.cand <- as.character(data.standard$gene2[indices.i])
+  #     co.ann.values.cand <- data.standard$is_annotated[indices.i]
+  #     
+  #     ## ---------- Get the symbol for second genes ----------
+  #     # We need to remove the NA's (present in entrez, but no mapping!)
+  #     # sum(sec.genes.entrez %in% names(gene.entrez.to.symbol))
+  #     non.na.ind <- sec.genes.entrez.cand %in% names(gene.entrez.to.symbol)
+  #     
+  #     sec.genes.entrez <- sec.genes.entrez.cand[non.na.ind] # 811
+  #     second.genes.symbol <- gene.entrez.to.symbol[sec.genes.entrez] ## Entry: 2
+  #     
+  #     ## ---------- Now get the corresponding annotation ----------
+  #     # common.genes.entrez <- intersect(sec.genes.entrez, sec.genes.entrez.cand)
+  #     # identical(common.genes.entrez, sec.genes.entrez)
+  #     # ind <- match(common.genes.entrez, sec.genes.entrez.cand)
+  #     co.ann.values <- co.ann.values.cand[non.na.ind] ## Entry: 3
+  #     
+  #     # Sanity check
+  #     # identical(i, as.character(unique(data.standard$gene1[indices.i[non.na.ind]])))
+  #     # identical(second.genes.symbol, gene.entrez.to.symbol[names(second.genes.symbol)]) # TRUE
+  #     # identical(co.ann.values, data.standard$is_annotated[indices.i[non.na.ind]]) # TRUE
+  #     
+  #     curr.size <- length(co.ann.values)
+  #     
+  #     # If curr.size is zero, ind.to.fill is not going to be empty, unlike Matlab
+  #     if (curr.size > 0){ 
+  #       ind.to.fill <- curr.ind: (curr.ind + curr.size - 1)
+  #       
+  #       gene1.symbol[ind.to.fill] <- rep(first.gene.symbol, length(ind.to.fill))
+  #       gene2.symbol[ind.to.fill] <- second.genes.symbol
+  #       is.annotated[ind.to.fill] <- co.ann.values  
+  #     }
+  #     
+  #     curr.ind <- curr.ind + curr.size # Update
+  #     
+  #     # Progress bar update
+  #     pb_count <- pb_count + 1
+  #     setTxtProgressBar(pb, pb_count/length(gene.names.entrez))
+  #   }
+  #   close(pb)
+  #   
+  #   data.GIANT <- data.frame(gene1 = gene1.symbol[1:(curr.ind-1)], gene2 = gene2.symbol[1:(curr.ind-1)], is_annotated = is.annotated[1:(curr.ind-1)], stringsAsFactors = FALSE)
+  #   # data.GIANT <- data.GIANT[-(curr.ind : length(is.annotated)), ]
+  #   
+  #   # If there is any NA in the gene names (which shouldn't be the case)
+  #   ind.na <- which(is.na(data.GIANT$gene2) | is.nan(data.GIANT$gene2))
+  #   if (length(ind.na) > 0){
+  #     data.GIANT <- data.GIANT[-ind.na, ]
+  #   }
+  #   
+  #   if (is.unsorted(data.GIANT$gene1)){
+  #     ind <- order(data.GIANT$gene1)
+  #     data.GIANT <- data.GIANT[ind,]
+  #   } 
+  # }
+  # 
+  # return (data.GIANT)
