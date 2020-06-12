@@ -522,16 +522,43 @@ getSubsetOfCoAnnRemoveGenes <- function(data_standard, data_subset, gene_list, r
 getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, replace = FALSE){
   
   ## *** Check input data format
-  if( (class(data_standard) != 'data.frame') | (class(data_subset) != 'data.frame')){
-    stop ("data_standard is supposed to be data.frame")
+  if(class(data_subset) != 'data.frame'){
+    stop ("data_subset is supposed to be data.frame")
   }
   if(class(gene_list) != 'list'){
     stop ("gene_list is supposed to be a list of genes")
   }
   
+  if(class(data_standard) == 'list'){
+    ## Get the groupings
+    gene.indices <- data_standard$gene.indices # sorted by entrez ID
+    unique.genes.std.entrez <- row.names(gene.indices)
+    
+    ## Get the mappings
+    mapping <- data_standard$mapping
+    unique.genes.std.symbol <- mapping[row.names(gene.indices)]
+    
+    # Use the mappings to change gene_list
+    mapped_list <- gene_list
+    for (i in 1:length(mapped_list) ){
+      common_genes <- intersect(mapped_list[[i]], mapping)
+      ind_genes_in_mapping <- match(common_genes, mapping)
+      mapped_list[[i]] <- as.integer(names(mapping)[ind_genes_in_mapping])
+    }
+    # identical(unname(mapping[as.character(mapped_list[[1]])]), mapped_list[[1]])
+    
+    ## Main data
+    data.relevant <- data_standard$data
+    
+  } else if(class(data_standard) == 'data.frame'){
+    data.relevant <- data_standard
+  } else{
+    stop('data_standard is supposed to be a data.frame or a list')
+  }
+  
   ## *** Check if gene pairs are provided for data_standard
-  pair_sum <- sum(grepl('gene1', colnames(data_standard))) + 
-    sum(grepl('gene2', colnames(data_standard)))
+  pair_sum <- sum(grepl('gene1', colnames(data.relevant))) + 
+    sum(grepl('gene2', colnames(data.relevant)))
   if (pair_sum != 2){
     stop('data_standard: gene pair names are not provided !!')
   }
@@ -547,7 +574,7 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
       tmp = data_subset[log_ind_pos,]
       row.names(tmp) <- tmp$index # The indices are the row identifiers in data_standard
       
-      data_input <- cbind(data_standard[tmp$index,c('gene1', 'gene2')], tmp)
+      data_input <- cbind(data.relevant[tmp$index,c('gene1', 'gene2')], tmp)
     } else{
       stop ("ill-formated input for data_subset: no column named 'true' ")
       return (NULL)
@@ -556,11 +583,11 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
     data.output <- data_subset # Initializing output
     
   } else{ # data_subset is NULL / not provided
-    if (sum(grepl('is_annotated', colnames(data_standard)))){
-      log_ind_pos = which(data_standard$is_annotated == 1)
-      data_input <- data_standard[log_ind_pos, ]
+    if (sum(grepl('is_annotated', colnames(data.relevant)))){
+      log_ind_pos = which(data.relevant$is_annotated == 1)
+      data_input <- data.relevant[log_ind_pos, ]
       
-      data.output <- data_standard # Initializing output
+      data.output <- data.relevant # Initializing output
     } else{
       stop ("ill-formated input for data_standard: no column named 'is_annotated' ")
       return (NULL)
@@ -579,8 +606,8 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
   gene_second <- c()
   count <- 0
   
-  for (i in 1:length(gene_list) ){
-    genes_in_complex <- sort(gene_list[[i]])
+  for (i in 1:length(mapped_list) ){
+    genes_in_complex <- sort(mapped_list[[i]])
     count <- count + choose(length(genes_in_complex), 2)
     
     for (j in 1: (length(genes_in_complex)-1) ){ # The -1 is necessary
@@ -640,7 +667,7 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
   if (replace == FALSE){ # Way1 (default): Remove the positive examples associated with '320'
     data.output <- data.output[-log_ind_pos[interested_indices], ]
   } else { # Way 2: Convert the positive examples associated with '320' to negative
-    if (sum(grepl('true', colnames(data.standard)))){
+    if (sum(grepl('true', colnames(data.relevant)))){
       data.output$true[log_ind_pos[interested_indices]] <- 0
     } else{
       data.output$is_annotated[log_ind_pos[interested_indices]] <- 0
