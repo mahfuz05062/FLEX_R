@@ -119,36 +119,36 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
   
   ## *** Calculate the max y-lim and x-lim for the plots (if not provided)
   #  In R, we have to this beforehand as we are going to plot multiple lines
-    plot.xlim = -1
-    plot.ylim = -1
-    
-    for (i in 1 : length(plot.data)) {
-      tmp <- plot.data[[i]]
-      
-      ind.10 <- which(tmp$x == 9) # Remove data for TP < 10
-      
-      if (length(ind.10) > 0){ 
-        # The first 10 points are excluded from plotting
-        x <- max(tmp$x[-(1:ind.10[length(ind.10)])])
-        y <- max(tmp$y[-(1:ind.10[length(ind.10)])])
-      } else{ # What if it's not there?
-        x <- max(tmp$x)
-        y <- max(tmp$y)
-      }
-      
-      if (x > plot.xlim){
-        plot.xlim <- x
-      }
-      if (y > plot.ylim){
-        plot.ylim <- y
-      }
-    }
+  plot.xlim = -1
+  plot.ylim = -1
   
-    if(!is.null(provided.xlim)) {plot.xlim <- provided.xlim}
-    if(!is.null(provided.ylim)) {plot.ylim <- provided.ylim}
+  for (i in 1 : length(plot.data)) {
+    tmp <- plot.data[[i]]
     
-    plot.xlim <- 10 ^ ceiling(log10(plot.xlim))
-    plot.ylim <- round(plot.ylim + 0.01, 2)
+    ind.10 <- which(tmp$x == 9) # Remove data for TP < 10
+    
+    if (length(ind.10) > 0){ 
+      # The first 10 points are excluded from plotting
+      x <- max(tmp$x[-(1:ind.10[length(ind.10)])])
+      y <- max(tmp$y[-(1:ind.10[length(ind.10)])])
+    } else{ # What if it's not there?
+      x <- max(tmp$x)
+      y <- max(tmp$y)
+    }
+    
+    if (x > plot.xlim){
+      plot.xlim <- x
+    }
+    if (y > plot.ylim){
+      plot.ylim <- y
+    }
+  }
+  
+  if(!is.null(provided.xlim)) {plot.xlim <- provided.xlim}
+  if(!is.null(provided.ylim)) {plot.ylim <- provided.ylim}
+  
+  plot.xlim <- 10 ^ ceiling(log10(plot.xlim))
+  plot.ylim <- round(plot.ylim + 0.01, 2)
   
   ## *** Save to an output file
   if (save.figure == TRUE){
