@@ -545,7 +545,7 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
       ind_genes_in_mapping <- match(common_genes, mapping)
       mapped_list[[i]] <- as.integer(names(mapping)[ind_genes_in_mapping])
     }
-    # identical(unname(mapping[as.character(mapped_list[[1]])]), mapped_list[[1]])
+    # identical(unname(mapping[as.character(mapped_list[[1]])]), gene_list[[1]]) # TRUE
     
     ## Main data
     data.relevant <- data_standard$data
@@ -570,7 +570,7 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
       stop('No indices given for data_subset .. we need this!!')
     }
     if (sum(grepl('true', colnames(data_subset)))){
-      log_ind_pos = which(data_subset$true == 1)
+      log_ind_pos = which(data_subset$true == 1) # log_ind_pos: Need later ***
       tmp = data_subset[log_ind_pos,]
       row.names(tmp) <- tmp$index # The indices are the row identifiers in data_standard
       
@@ -595,11 +595,12 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
   }
 
   ## Sort the data by first gene and group
-  ind_saved <- order(data_input$gene1)
+  ind_saved <- order(data_input$gene1) # ind_saved: Need later ***
   data_tmp <- data_input[ind_saved,]
   
   ind_source <- GroupUniqueElements(data_tmp$gene1)
   genes_source <- row.names(ind_source)
+  
   
   ## -------- Construct the list of unique pairs to remove / replace --------
   gene_first <- c()
@@ -633,13 +634,12 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
   ind_cand <- GroupUniqueElements(pair_list$first) # group by first gene
   genes_cand <- row.names(ind_cand) # ETCI (45) - good
   
-  
-  # Now find the pairs (indices) to remove in the source/annotation data
-  genes_common <- intersect(genes_source, genes_cand) # 36 (if genes_source comes from data_subset), otherwise 45
+  ## *** Now find the pairs (indices) to remove in the source/annotation data
+  genes_common <- intersect(genes_source, genes_cand) # 70
   ia <- match(genes_common, genes_source)
   ic <- match(genes_common, genes_cand)
   
-  interested_indices <- c()
+  interested_indices <- c() # Good until here?
   for (i in seq_along(ia)){ # i in 1 : length(ia) will fail if ia is empty
     sec_genes_cand <- pair_list$second[ind_cand[ic[i],1]:ind_cand[ic[i],2]]
     
@@ -649,13 +649,13 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
     genes_tmp <- intersect(sec_genes_source, sec_genes_cand)
     ia_source <- match(genes_tmp, sec_genes_source)
     
-    interested_indices = c(interested_indices, src_indices[ia_source])
+    interested_indices = c(interested_indices, src_indices[ia_source]) # *** And this one
   }
   (length(interested_indices))
 
-  # data_tmp[interested_indices,]
+  # data_tmp[interested_indices,] # unique(data_tmp[interested_indices,1])
   # one of the following are going to be true
-  # identical(data_standard[log_ind_pos[ind_saved[ interested_indices]],'is_annotated'], data_tmp[interested_indices,'is_annotated'])
+  # identical(data_subset[log_ind_pos[ind_saved[ interested_indices]],'is_annotated'], data_tmp[interested_indices,'is_annotated'])
   # identical(data_subset[log_ind_pos[ind_saved[ interested_indices]],'true'], data_tmp[interested_indices,'true'])
   
   # Check for unexpected output
@@ -663,14 +663,16 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
     return (data.output)
   }
   
+  # mapping[as.character(unique(data.relevant[data.output[log_ind_pos[ind_saved[interested_indices]], 3],1]))]
+  
   # Final data
   if (replace == FALSE){ # Way1 (default): Remove the positive examples associated with '320'
-    data.output <- data.output[-log_ind_pos[interested_indices], ]
+    data.output <- data.output[-log_ind_pos[ind_saved[interested_indices]], ]
   } else { # Way 2: Convert the positive examples associated with '320' to negative
     if (sum(grepl('true', colnames(data.relevant)))){
-      data.output$true[log_ind_pos[interested_indices]] <- 0
+      data.output$true[log_ind_pos[ind_saved[interested_indices]]] <- 0
     } else{
-      data.output$is_annotated[log_ind_pos[interested_indices]] <- 0
+      data.output$is_annotated[log_ind_pos[ind_saved[interested_indices]]] <- 0
     }
   }
   
