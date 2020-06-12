@@ -552,6 +552,8 @@ getSubsetOfCoAnnRemovePairs <- function(data_standard, data_subset, gene_list, r
     
   } else if(class(data_standard) == 'data.frame'){
     data.relevant <- data_standard
+    mapped_list <- gene_list
+    
   } else{
     stop('data_standard is supposed to be a data.frame or a list')
   }
