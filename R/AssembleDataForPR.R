@@ -123,6 +123,8 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
 # Supporting function for CalculatePredictionAndTrueOnLibraryProfiles
 FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
   
+  print('In FromAllPairwiseCorrelation (data.standard, data.interaction) ...')
+  
   ## Pre-processing ===================================
   # print('speed optimizations ...')
   length.corr <- dim(pairwise.correlation)[1]
@@ -268,6 +270,8 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
 
 # Supporting function for CalculatePredictionAndTrueOnLibraryProfiles
 FromGenePairSimilarity <- function(data.standard, data.interaction){
+  
+  print('In FromGenePairSimilarity (data.standard, data.interaction) ...')
   
   ## Pre-processing ===================================
   # Sort the co annotation data (data.standard)
@@ -558,12 +562,13 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
 }
 
 
-
 ## ==============================================================================
 ##          Standard in Entrez, interaction in Symbol
 ## ==============================================================================
 # Supporting function for CalculatePredictionAndTrueOnLibraryProfiles
 FromAllPairwiseCorrelationEntrez <- function(data.standard, pairwise.correlation){
+  
+  print('In FromAllPairwiseCorrelationEntrez (data.standard, data.interaction) ...')
   
   ## Pre-processing ===================================
   if (class(data.standard) == 'list'){
@@ -698,6 +703,8 @@ FromAllPairwiseCorrelationEntrez <- function(data.standard, pairwise.correlation
 
 # Supporting function for CalculatePredictionAndTrueOnLibraryProfiles
 FromGenePairSimilarityEntrez <- function(data.standard, data.interaction){
+  
+  print('In FromGenePairSimilarityEntrez (data.standard, data.interaction) ...')
   
   ## Pre-processing ===================================
   if (class(data.standard) == 'list'){
