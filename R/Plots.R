@@ -41,7 +41,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
                              type.plot = 'log', is.bgdline = FALSE,
                              provided.xlim = NULL, provided.ylim = NULL,
                              legend.names = NULL, legend.color = c('blue'),
-                             legend.ltype = NULL,
+                             legend.ltype = NULL, box.type = 'L',
                              fig.title = NULL, fig.labs = c('TP', 'Precision'),
                              save.figure = FALSE, 
                              outfile.name = 'test_PR_sim', outfile.type = 'pdf') {
@@ -180,7 +180,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
         plot(data.x.axis, data.y.axis, 
              xlim = c(10, plot.xlim), ylim = c(0, plot.ylim),
              log = 'x', type = 'l', main = fig.title,
-             bty = "L", # 'n' -> no box, nothing - all boxes
+             bty = box.type, # 'n' -> no box, nothing - all boxes
              xlab = fig.labs[1], ylab = fig.labs[2], 
              lwd = 2, col = legend.color[i], lty = legend.ltype[i],
              cex.lab = 1.4, cex.main = 1.4, cex.axis = 1.4,
@@ -198,7 +198,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
         # Normal plot
         plot(data.x.axis, data.y.axis, xlim = c(10, plot.xlim), ylim = c(0, plot.ylim), 
              type = 'l', main = fig.title,
-             bty = "L", # 'n' -> no box, nothing - all boxes
+             bty = box.type, # 'n' -> no box, nothing - all boxes
              xlab = fig.labs[1], ylab = fig.labs[2], font.main = 1,
              lwd = 2, col = legend.color[i], lty = legend.ltype[i],
              cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4)
@@ -212,7 +212,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
   if (!is.null(legend.names)){
     legend("topright", legend = legend.names, 
            fill = legend.color, lwd = 2, lty = legend.ltype[i],
-           bty = "n", # to remove the box
+           bty = box.type, # to remove the box
            cex = 1.2, text.col = "black", horiz = F)
     
     # Printing some warning, just in case!
