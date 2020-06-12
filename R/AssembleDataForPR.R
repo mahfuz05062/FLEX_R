@@ -136,9 +136,8 @@ FromAllPairwiseCorrelation <- function(data.standard, pairwise.correlation){
     data.standard <- data.standard[ind,]
   }
   
-  out <- GroupUniqueElements(data.standard$gene1)
-  gene.indices <- out
-  unique.names.genes <- row.names(out)
+  gene.indices <- GroupUniqueElements(data.standard$gene1)
+  unique.names.genes <- row.names(gene.indices)
   
   # Fill out similarity values and corresponding co-annotation (1/0) for each
   # common gene pairs between similarity and co-annotation
@@ -753,10 +752,10 @@ FromGenePairSimilarityEntrez <- function(data.standard, data.interaction){
   for (i in seq_along(ind.int.genes)){
     
     curr.int.gene <- ind.int.genes[i] # apply as indices to pairwise.correlation
-    curr.std.gene <- ind.std.genes[i] # appy as indices to gene.indices
+    curr.std.gene <- ind.std.genes[i] # appy as indices to gene.indices.std
     
     ## Get co-annotation values for all pairs of curr.std.gene
-    ind.pairs.in.std <- gene.indices[curr.std.gene,1] : gene.indices[curr.std.gene,2]
+    ind.pairs.in.std <- gene.indices.std[curr.std.gene,1] : gene.indices.std[curr.std.gene,2]
     std.second.genes <- mapping[as.character(data.ca[ind.pairs.in.std, 2])]
     
     non.na.ind <- !is.na(std.second.genes) # There maybe some NA's (no mapping)
@@ -827,7 +826,7 @@ FromGenePairSimilarityEntrez <- function(data.standard, data.interaction){
   for (i in seq_along(ind.int.genes)){
     
     curr.int.gene <- ind.int.genes[i] # apply as indices to pairwise.correlation
-    curr.std.gene <- ind.std.genes[i] # appy as indices to gene.indices
+    curr.std.gene <- ind.std.genes[i] # appy as indices to gene.indices.std
     
     ## Get co-annotation values for all pairs of curr.std.gene
     ind.pairs.in.std <- ind.gene2[gene.indices.std[curr.std.gene,1] : gene.indices.std[curr.std.gene,2]] # As we didn't change the data during the grouping
