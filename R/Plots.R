@@ -205,7 +205,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
       }
     }
     else{ # For every other time
-      lines(data.x.axis, data.y.axis, col=legend.color[i], font.main = 1, lwd = 2, lty = legend.ltype[i]) 
+      lines(data.x.axis, data.y.axis, col=legend.color[i], lwd = 2, lty = legend.ltype[i]) 
     }
   }
   
@@ -369,7 +369,8 @@ PlotContributionScatter <- function(plot.data,
                                     length.cutoff = 30, AUPRC.cutoff = 0.4, 
                                     fig.title = NULL, fig.labs = c('AUPRC', 'Size'),
                                     show.text = FALSE, show.cutoffs = FALSE,
-                                    save.figure = FALSE, outfile.type = 'pdf', outfile.name = 'test_scatter') {
+                                    save.figure = FALSE, 
+                                    outfile.type = 'pdf', outfile.name = 'test_scatter') {
   
   ## *** Check if we have the right columns in plot.data
   corr_columns <- sum(grepl('Name', names(plot.data))) + sum(grepl('Length', names(plot.data))) + sum(grepl('AUPRC', names(plot.data)))
@@ -455,6 +456,7 @@ PlotContributionScatter <- function(plot.data,
 #' @param alternative.names Provide a list of names (corresponds to list.of.complexes.to.show) to use as alternative to original names
 #' @param min.precision.cutoff How far down should we go in precision cutoff to calcualte contribution of complexes? Default is 0.5, meaning we calculate contributions starting from the highest precision (where we have at least min.pairs) to the min.precision.cutoff and take a mean contribution to rank the complexes.
 #' @param ccol colors for the top complexes highlighted (top 10 contributing complexes are colored by default)
+#' @param show.legend default TRUE. Set to FALSE if we don't want to print legends.
 #' @param fig.title title in case we want to save the image
 #' @param fig.labs x and y axis labels
 #' @param save.figure do we want to save or just plot
@@ -468,9 +470,10 @@ PlotContributionScatter <- function(plot.data,
 
 PlotContributionStructure <- function(plot.data, cutoff.all, 
                                       min.pairs = 10, min.precision.cutoff = 0.5, 
-                                      num.complex.to.show = 10,
-                                      list.of.complexes.to.show = NULL, alternative.names = NULL,
-                                      ccol = NULL, fig.title = NULL, 
+                                      num.complex.to.show = 10, show.legend = TRUE,
+                                      list.of.complexes.to.show = NULL, 
+                                      alternative.names = NULL,
+                                      ccol = NULL, y.lim = NULL, fig.title = NULL, 
                                       fig.labs = c('Fraction of TP', 'Precision'), 
                                       outfile.name = 'test_cont_str', outfile.type = 'pdf',
                                       save.figure = FALSE) {
@@ -490,7 +493,7 @@ PlotContributionStructure <- function(plot.data, cutoff.all,
   
   if (!is.null(list.of.complexes.to.show)){
     if (num.complex.to.show != length(list.of.complexes.to.show) ){
-      stop("Size of number of complexes to how and list of complexes doesn't match ...")
+      stop("Size of number of complexes to show and list of complexes doesn't match ...")
     }
   }
   
@@ -547,7 +550,6 @@ PlotContributionStructure <- function(plot.data, cutoff.all,
   # tmp.x <- x
   # ind.for.mean <- (dim(x)[2]-9):dim(x)[2]
   
-  
   # ** Take the bottom (largest contributions) num.complex.to.show (default 10)
   if (is.null(list.of.complexes.to.show)){
     a <- order(apply(tmp.x[,ind.for.mean], 1, mean))
@@ -558,9 +560,15 @@ PlotContributionStructure <- function(plot.data, cutoff.all,
     if (!is.null(alternative.names)){ # Replace names with alternatives (if provided)
       row.names(x) <- alternative.names
     }
-    x<- x[seq(dim(x)[1],1),] # Need to revert
+    
+    x <- x[seq(dim(x)[1],1),] # Need to revert
+    ccol <- ccol[seq(length(ccol),1)]
+    
+    # If there is NA
+    non.na.ind <- !is.na(x[,1])
+    x <- x[non.na.ind,] # If there is NA due to complex name not found!
+    ccol <- ccol[non.na.ind]
   }
-  
   
   ## *** Settle colors for top 10 complexes. If 10 colors are not provided, 
   #  we use a red to blue scale
@@ -569,9 +577,8 @@ PlotContributionStructure <- function(plot.data, cutoff.all,
   if (is.null(ccol)){
     # ccol <- c(colorRampPalette(colors = c("#bb2003","#3e7acf"))(dim(x)[1]))
     ccol <- c(colorRampPalette(colors = c("red","blue"))(dim(x)[1]))
-  }
-  else{
-    if(length(ccol) < num.complex.to.show){
+  } else{
+    if(length(ccol) < dim(x)[1]){
       warning ('Number of complex to show and number of colors provide do not match!! Using default coloring ...')
       ccol <- c(colorRampPalette(colors = c("red","blue"))(dim(x)[1]))
     }
@@ -582,7 +589,6 @@ PlotContributionStructure <- function(plot.data, cutoff.all,
   xb <- rbind(1 - apply(xb, 2, sum), xb) # Contribution of other complexes not in xb (14 * 37 now)
   row.names(xb)[1] <- "others"
   ccol <- c("#d9d9d9", ccol) # Gray (for rest)
-  
   
   ## *** Data for Muller Plot
   x <- xb#[,-1]
@@ -612,23 +618,32 @@ PlotContributionStructure <- function(plot.data, cutoff.all,
     }
   }
   
-  
-  #layout.show(nf)
-  nf <- layout(matrix(c(1,2), 2,1), c(5,5), c(3,2), TRUE)
-  par(mar = c(4,4,1,1)) # bottom, left, top, right (order of margin)
-  plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, cex.main = 0.8)
-  
-  for(i in 1:dim(x1)[1]) {
-    polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
+  if (show.legend == TRUE){ # If we have to print legends (complex names)
+    # Create a layout
+    nf <- layout(matrix(c(1,2), 2,1), c(5,5), c(3,2), TRUE) #layout.show(nf)
+    par(mar = c(4,4,1,1)) # bottom, left, top, right (order of margin)
+    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, cex.lab = 1.4, cex.axis = 1.4)
+    
+    for(i in 1:dim(x1)[1]) {
+      polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
+    }
+    
+    # Restricting each complex to 55 chars so that it doesn't overflow
+    legend.complex <- unlist(lapply(rev(row.names(x1)), substr, 1, 55)) 
+    
+    par(mar = c(1,1,0,1))
+    # Make a null plot for legend
+    plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1) 
+    # Plot the legend (reverse so the best complex comes to the top)
+    legend("center", legend = legend.complex, fill = rev(ccol), cex = 0.6, bty='n')
+    
+  } else{ # Just show the contribution plot (without any names)
+    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, cex.lab = 1.4, cex.axis = 1.4)
+    
+    for(i in 1:dim(x1)[1]) {
+      polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
+    }
   }
-  
-  # Plot the legend (reverse so the best complex comes to the top)
-  legend.complex <- unlist(lapply(rev(row.names(x1)), substr, 1, 55)) # Restricting each complex to 55 chars so that it doesn't overflow
-  
-  par(mar = c(1,1,0,1))
-  # Make a null plot for legend
-  plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1) 
-  legend("center", legend = legend.complex, fill = rev(ccol), cex = 0.6, bty='n')
   
   if (save.figure){
     dev.off()
@@ -660,8 +675,8 @@ cTP_func <- function(data, anno, complexes,
   
   x <- data # Stepwise contribution per precision
   for(i in 1:dim(data)[1]) {
-    print(data[i,])
-    print(choose(length(complexes[[anno[[i]]]]), 2))
+    # print(data[i,])
+    # print(choose(length(complexes[[anno[[i]]]]), 2))
     
     # Normalizing complex contribution by number of possible gene pairs (nC2)
     x[i,] <- data[i,] / choose(length(complexes[[anno[[i]]]]), 2) 
@@ -695,7 +710,10 @@ cTP_func <- function(data, anno, complexes,
 #'
 #' @export
 #' 
-PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL, legend.names = NULL, ccol = NULL, save.figure = FALSE, outfile.name = 'test_category_PR', outfile.type = 'pdf'){
+PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL, 
+                           legend.names = NULL, ccol = NULL, 
+                           fig.labs = c('Category TP', 'Precision'),
+                           save.figure = FALSE, outfile.name = 'test_category_PR', outfile.type = 'pdf'){
   
   # Remove complexes (say top complex, top 3, top 5, top 10 etc.) and generate the curve shown on the picture
   coreComplex_members <- strsplit(data_complex$Genes, "[;]") # ';' would work just fine
@@ -728,11 +746,16 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL, legend.
     
     
     if (i == 1){
-      plot(x, y, xlab = "category TP", ylab = "precision", bty = "n", las=1, ylim = c(0,max(y)), pch = 16, type = "l", log = "x", col = ccol[i])
+      plot(x, y, xlab = fig.labs[1], ylab = fig.labs[2], bty = "n", las=1, 
+           ylim = c(0,max(y)), pch = 16, 
+           type = "l", log = "x", lwd = 2,
+           cex.lab = 1.4, cex.main = 1.4, cex.axis = 1.4,
+           col = ccol[i])
       
     }else{
-      lines(x, y, col = ccol[i])
+      lines(x, y, col = ccol[i], lwd = 2,)
     }
+    print(max(x))
   }
   
   if(!is.null(legend.names)){
