@@ -182,53 +182,54 @@ GetAreaUnderPRCurveForEntities <- function (summary.standard, data.standard, ent
 #' Calculate the contribution of complex/PW etc. (num TP) at different precision cutoffs in a tabular format. This is different from Stepwise Contribution in that it doesn't find the smallest subset to explain all the TP, but takes all of them (and therefore some TPs are counted twice i.e. those are in multiple complexes)
 #'
 #' @param Pairs.in.data Identity of each entity ('ID'), 'Name', Genes insdie ('Gene'), 'Length'
-#' @param cutoff.all Precision cutoffs the user is interested in.
+#' @param list.of.precisions Precision cutoffs the user is interested in.
 #' @param summary.standard Summary of the standard used: includes ID, Name, Genes, and Length
 #'
 #' @return output.complex.contribution -> Complex by precision matrix (where entries are number of TP contributed by the complex at that precision)
 #' This is a entity ID * cutoff data.frame (with an extra column added for entity Name)
 #' @export
 #'  
-GetContributionOfEntitiesAtPrecisions <- function (Pairs.in.data, cutoff.all, summary.standard){
+GetContributionOfEntitiesAtPrecisions <- function (Pairs.in.data, list.of.precisions, summary.standard){
   
   ## *** Check input data format
   if((class(Pairs.in.data) != 'data.frame') & (class(summary.standard) != 'data.frame')){
     stop ("Check the input again ... it's supposed to be data.frame")
   }
   
-  # Sort the data by score (prediction)
+  # Cacluate TP and Precision
   ind <- order(Pairs.in.data$predicted, decreasing = TRUE)
   Pairs.in.data <- Pairs.in.data[ind,]
   
-  # Just a little different as in matlab the first values are 0 (TP or PR.values$x) and Nan (Precision or PR.values$y)
   PR.values <- GenerateDataForPerfCurve(value.predicted = Pairs.in.data$predicted, value.true = Pairs.in.data$true, x.axis = 'TP', y.axis = 'precision')
   TP = PR.values$x
   Precision = PR.values$y
+  ind.valid.precision <- (list.of.precisions >= min(Precision) & list.of.precisions <= max(Precision)) # Don't calculate for precisions out of range
+  
   TP.count = cumsum(Pairs.in.data$true)
   
-  ## Let's make a matrix for all IDs (associated with co-annotation) and cutoffs
-  # cutoff.all <- c(0.0059, seq(0.1, 1, 0.025)) # Looks good
+  ## Let's make a matrix of row = all complexes (IDs) and col = precision cutoffs
+  # list.of.precisions <- c(0.0059, seq(0.1, 1, 0.025)) # Looks good
   Pos.Pairs.in.data <- Pairs.in.data[Pairs.in.data$true == 1,]
   unique.IDs <- unique(unlist(strsplit(paste(Pos.Pairs.in.data$ID, collapse = ';'), split = ';')))
   
-  ID.cutoff.matrix <- matrix(0, nrow = length(unique.IDs), ncol = length(cutoff.all)) # Initial TP contribution matrix
+  ID.cutoff.matrix <- matrix(0, nrow = length(unique.IDs), ncol = length(list.of.precisions)) # Initial TP contribution matrix
   rownames(ID.cutoff.matrix) <- as.numeric(unique.IDs) # unique.IDs
   
-  final.contribution.matrix <- matrix(0, nrow = length(unique.IDs), ncol = length(cutoff.all)) # Stepwise TP contribution matrix
-  rownames(final.contribution.matrix) <- unique.IDs
-  
-  for (i in seq(1, length(cutoff.all), 1)) { # For all cutoffs provided
+  for (i in seq(1, length(list.of.precisions), 1)) { # For all cutoffs provided
     # for (i in seq(1, 5, 1)) {
     # i = 20
-    # print(paste('cutoff: ', cutoff.all[i], sep = ': '))
+    # print(paste('cutoff: ', list.of.precisions[i], sep = ': '))
     
-    cutoff <- cutoff.all[i]
-    cand.ind <- which(Precision >= cutoff)
-    tmp.ind <- which(TP.count == TP[cand.ind[length(cand.ind)]]) # Looks good
+    # If we don't have TP and Precision values for this, skip (will be zeros in output)
+    if(!ind.valid.precision[i]){ next } 
+    
+    cutoff <- list.of.precisions[i]
+    cand.ind <- which(Precision >= cutoff) # Last one (if > 1)
+    tmp.ind <- which(TP.count == TP[cand.ind[length(cand.ind)]]) # TP[cand.ind[length(cand.ind)]] : number of TPs at this precision
     
     # Get the TP pairs and their association (to complex IDs)
-    tmp.pairs <- Pairs.in.data[1 : tmp.ind[1], ]
-    tmp.pairs <- tmp.pairs[tmp.pairs$true == 1, ] # Only keep the TPs
+    tmp.pairs <- Pairs.in.data[1 : tmp.ind[1], ] # Should we use the first one or the last one? I don't think it matters because, the number of TP is not increasing anyway here!s
+    tmp.pairs <- tmp.pairs[tmp.pairs$true == 1, ]
     
     ## Find contribution of pairs for each entity (ID)
     for (j in seq(1, dim(tmp.pairs)[1], 1) ) {
@@ -247,27 +248,30 @@ GetContributionOfEntitiesAtPrecisions <- function (Pairs.in.data, cutoff.all, su
   nonzero.cont.ind <- which(!apply(ID.cutoff.matrix, 1, sum) == 0)
   final.contribution.matrix <- ID.cutoff.matrix[nonzero.cont.ind, ]
   
-  ## Now we have to map the IDs to the actual names of the entity (Complex) - We are keeping a smaller set intentionally
-  ia <- intersect(as.character(summary.standard$ID), row.names(final.contribution.matrix)) # Common complex IDs
+  ## map the IDs to the names of the Complex and combine to a data.frame
+  ia <- intersect(as.character(summary.standard$ID), row.names(final.contribution.matrix))
+  # ind_name <- match(ia, as.character(summary.standard$ID)) # identical(ia, as.character(summary.standard[ind_name,]$ID))
+  ind_std <- match(ia, as.character(summary.standard$ID))
+  ind_contr <- match(ia, row.names(final.contribution.matrix))
   
-  output.complex.contribution <- as.data.frame(final.contribution.matrix[ia, ])
-  colnames(output.complex.contribution) <- unlist(lapply(as.character(cutoff.all), paste, 'Precision', sep = '_'))
+  summary.contribution <- cbind(Name = summary.standard[ind_name,]$Name, as.data.frame(final.contribution.matrix[ind_contr,], stringsAsFactors = F))
   
-  # Add the name of complexes as the first column
-  ind_name <- match(ia, as.character(summary.standard$ID)) # identical(ia, as.character(summary.standard[ind_name,]$ID))
-  output.complex.contribution <- cbind(summary.standard[ind_name,]$Name, output.complex.contribution, stringsAsFactors = F)
-  colnames(output.complex.contribution)[1] <- 'Name'
+  ## Add column names (if a colname starts with 0, r reads it as X0 !!)
+  # names.prec <- gsub('.', '_', as.character(list.of.precisions), fixed = T) # fixed = T is important!!
+  # colnames(summary.contribution)[2:dim(summary.contribution)[2]] <- names.prec
+  # colnames(summary.contribution)[2:dim(summary.contribution)[2]] <- as.character(list.of.precisions)
+  colnames(summary.contribution)[2:dim(summary.contribution)[2]] <- paste0('Precision_', as.character(cutoff.all))
   
-  # Sort by the maximum Precision cutoff
-  ind <- order(output.complex.contribution[, dim(output.complex.contribution)[2]], decreasing = T)
-  output.complex.contribution <- output.complex.contribution[ind,]
+  # Sort by the maximum Precision cutoff (where we have valid data)
+  ind <- order(summary.contribution[, max(which(ind.valid.precision))], decreasing = T)
+  summary.contribution <- summary.contribution[ind,]
   
-  return (output.complex.contribution)
+  return (summary.contribution)
 }
 
 
 
-#' Separate the contribution of signal into individual entries (a complex, pathway, GO Biological Process etc.)
+#' Concentrate the signal (TPs) into the minimum number of complexes that can explain the signal + get the contribution of the complexes at different precisions.
 #'
 #' @param Pairs.in.data Identity of each entity ('ID'), 'Name', Genes insdie ('Gene'), 'Length'
 #' @param cutoff.all Precision cutoffs the user is interested in.
@@ -294,21 +298,28 @@ GetStepwiseContributionOfEntities <- function (Pairs.in.data, cutoff.all, summar
   Precision = PR.values$y
   TP.count = cumsum(Pairs.in.data$true)
   
-  ## Let's make a matrix for all IDs (associated with co-annotation) and cutoffs
-  # cutoff.all <- c(0.0059, seq(0.1, 1, 0.025)) # Looks good
+  # *** Don't calculate for precisions out of range
+  ind.valid.precision <- (cutoff.all >= min(Precision) & cutoff.all <= max(Precision))
+  
+  ## Let's make a matrix of row = all complexes (IDs) and col = precision cutoffs
   Pos.Pairs.in.data <- Pairs.in.data[Pairs.in.data$true == 1,]
   unique.IDs <- unique(unlist(strsplit(paste(Pos.Pairs.in.data$ID, collapse = ';'), split = ';')))
   
-  ID.cutoff.matrix <- matrix(0, nrow = length(unique.IDs), ncol = length(cutoff.all)) # Initial TP contribution matrix
+  # Initial TP contribution matrix
+  ID.cutoff.matrix <- matrix(0, nrow = length(unique.IDs), ncol = length(cutoff.all)) 
   rownames(ID.cutoff.matrix) <- as.numeric(unique.IDs) # unique.IDs
   
+  # Final TP contribution matrix
   final.contribution.matrix <- matrix(0, nrow = length(unique.IDs), ncol = length(cutoff.all)) # Stepwise TP contribution matrix
   rownames(final.contribution.matrix) <- unique.IDs
   
   for (i in seq(1, length(cutoff.all), 1)) {
-  # for (i in seq(1, 5, 1)) {
-    # i = 20
-    # print(paste('cutoff: ', cutoff.all[i], sep = ': '))
+  
+    # If thsi precision cutoff is invalid (we don't have data for it), skip 
+    # All contributions will remain zeros in output for these cutoffs 
+    if(!ind.valid.precision[i]){ next } 
+    
+    print(paste('valid cutoff: ', cutoff.all[i], sep = ': '))
     
     cutoff = cutoff.all[i]
     cand.ind <- which(Precision >= cutoff)
@@ -385,30 +396,26 @@ GetStepwiseContributionOfEntities <- function (Pairs.in.data, cutoff.all, summar
       
       id.ind <- id.ind + 1
     }
-    # sort(final.contribution.matrix[final.contribution.matrix[,i] > 0, i], decreasing = T)
-  }
   
-  # tmp <- final.contribution.matrix
-  # final.contribution.matrix <- tmp
+  }
   
   # Remove those IDs that didn't contribute to any TP pairs (in stepwise contribution)
   nonzero.cont.ind <- which(!apply(final.contribution.matrix, 1, sum) == 0)
   final.contribution.matrix <- final.contribution.matrix[nonzero.cont.ind, ]
   
-  ## Now we have to map the IDs to the actual names of the entity (Complex) - We are keeping a smaller set intentionally
+  ## Now we have to map the IDs to the actual names of the entity (Complex)
   ia <- intersect(as.character(summary.standard$ID), row.names(final.contribution.matrix)) # Common complex IDs
   
   output.stepwise.contribution <- as.data.frame(final.contribution.matrix[ia, ])
-  colnames(output.stepwise.contribution) <- unlist(lapply(as.character(cutoff.all), paste, 'Precision', sep = '_'))
+  colnames(output.stepwise.contribution) <- paste0('Precision_', as.character(cutoff.all))
   
   # Add the name of complexes as the first column
   ind_name <- match(ia, as.character(summary.standard$ID)) # identical(ia, as.character(summary.standard[ind_name,]$ID))
-  output.stepwise.contribution <- cbind(summary.standard[ind_name,]$Name, output.stepwise.contribution, stringsAsFactors = F)
-  # output.stepwise.contribution <- cbind(summary.standard[ia,]$Name, output.stepwise.contribution, stringsAsFactors = F) 
-  colnames(output.stepwise.contribution)[1] <- 'Name'
+  output.stepwise.contribution <- cbind(Name = summary.standard[ind_name,]$Name, output.stepwise.contribution, stringsAsFactors = F)
+  # colnames(output.stepwise.contribution)[1] <- 'Name'
   
-  # Sort by the maximum Precision cutoff
-  ind <- order(output.stepwise.contribution[, dim(output.stepwise.contribution)[2]], decreasing = T)
+  # Sort by the maximum (valid) Precision cutoff
+  ind <- order(output.stepwise.contribution[, max(which(ind.valid.precision))], decreasing = T)
   output.stepwise.contribution <- output.stepwise.contribution[ind,]
   
   # Convert factor to character
@@ -416,9 +423,6 @@ GetStepwiseContributionOfEntities <- function (Pairs.in.data, cutoff.all, summar
   
   return (output.stepwise.contribution)
 }
-
-
-
 
 
 
