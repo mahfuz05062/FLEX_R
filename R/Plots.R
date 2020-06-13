@@ -468,7 +468,7 @@ PlotContributionScatter <- function(plot.data,
 #' @examples
 #
 
-PlotContributionStructure <- function(plot.data, cutoff.all, 
+PlotContributionStructure <- function(plot.data, cutoff.all = NULL, 
                                       min.pairs = 10, min.precision.cutoff = 0.5, 
                                       num.complex.to.show = 10, show.legend = TRUE,
                                       list.of.complexes.to.show = NULL, 
@@ -483,7 +483,10 @@ PlotContributionStructure <- function(plot.data, cutoff.all,
     if(sum(grepl('Name', names(plot.data))) != 1){
       stop("plot.data should contain 'Name' for complexes ... ")
     } else{
-      if(dim(plot.data)[2] != (length(cutoff.all) + 1)){
+      if(is.null(cutoff.all)){
+        print('Using precision cutoffs directly from file')
+      }
+      else if(dim(plot.data)[2] != (length(cutoff.all) + 1)){
         stop("plot.data and cutoff.all doesn't match ...")
       }
     }
@@ -508,8 +511,12 @@ PlotContributionStructure <- function(plot.data, cutoff.all,
   tmp_TP <- apply(cont_stepwise_mat, 2, sum) # Summing the number of pairs at each cutoff
   Precision_ind <- (tmp_TP >= min.pairs) # Using 10 TP as the default parameter
   cont_stepwise_mat <- cont_stepwise_mat[,Precision_ind]
-  
-  y <- cutoff.all[Precision_ind]
+
+  # TODO: automatically get this from the data (plot.data)
+  if (is.null(cutoff.all)){
+    tmp <- names(Precision_ind)
+    y <- as.numeric(substr(tmp, 11, max(sapply(tmp, nchar))))
+  } else {y <- cutoff.all[Precision_ind] }
   
   # Find the fraction of TP contributed per complex (at a certain precision)
   # https://haky-functions.blogspot.com/2006/11/repmat-function-matlab.html
@@ -707,7 +714,18 @@ cTP_func <- function(data, anno, complexes,
 #' @param save.figure set to TRUE to save the figure (fig.title is used as the name)
 #' @param outfile.name the name of the output file(figure)
 #' @param outfile.type type of figure to save - 'pdf' (default) or 'png'
-#'
+#' 
+#' @example
+#' data('data_complex', package = 'FLEX')
+#' 
+#' pr_full <- read.table(paste0('Stepwise_contribution_Complex_', datasets[i] ,'.txt'), stringsAsFactors=FALSE, sep = "\t", header = T)
+#' pr_removed <- read.table(paste0('Stepwise_contribution_Complex_Removal_', datasets[i] ,'.txt'), stringsAsFactors=FALSE, sep = "\t", header = T)
+#' 
+#' pr.stepwise <- list(full = list(data = pr_full))
+#' pr.stepwise <- append(pr.stepwise, list(removed = list(data = pr_removed)))
+#' 
+#' PlotCategoryPR(data_complex, pr.stepwise, thresholds = c(1, 0.1), ccol = c('#252525', '#bd0026'), fig.labs = c('TP Complexes', 'Precision'))
+#' 
 #' @export
 #' 
 PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL, 
@@ -729,11 +747,19 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL,
   }
   
   for (i in 1 : length(pr.stepwise)) {
-    pr_contri = pr.stepwise[[i]]$data
-    y <- pr.stepwise[[i]]$cutoffs
     
+    pr_contri = pr.stepwise[[i]]$data
     pr_contri_anno <- pr_contri$Name
-    pr_contri <- pr_contri[,-1]
+    pr_contri <- pr_contri[,-1] # Remove complex Name, and keep the data
+    
+    ## Old way
+    # y <- pr.stepwise[[i]]$cutoffs
+    
+    ## New way (calculation of y) - now we don't need to send cutoffs
+    tmp <- names(pr_contri)
+    y <- as.numeric(substr(tmp, 11, max(sapply(tmp, nchar))))
+    y <- y[-1] # no background is shown
+    y <- c(y,1) # A 1 is added! Why!
     
     if (is.null(thresholds)){
       x <- cTP_func(data = pr_contri, anno = pr_contri_anno,
