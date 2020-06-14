@@ -511,10 +511,10 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
   tmp_TP <- apply(cont_stepwise_mat, 2, sum) # Summing the number of pairs at each cutoff
   Precision_ind <- (tmp_TP >= min.pairs) # Using 10 TP as the default parameter
   cont_stepwise_mat <- cont_stepwise_mat[,Precision_ind]
-
+  
   # TODO: automatically get this from the data (plot.data)
   if (is.null(cutoff.all)){
-    tmp <- names(Precision_ind)
+    tmp <- names(cont_stepwise_mat)
     y <- as.numeric(substr(tmp, 11, max(sapply(tmp, nchar))))
   } else {y <- cutoff.all[Precision_ind] }
   
@@ -729,9 +729,11 @@ cTP_func <- function(data, anno, complexes,
 #' @export
 #' 
 PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL, 
-                           legend.names = NULL, ccol = NULL, 
+                           legend.names = NULL, legend.ltype = NULL, 
+                           ccol = NULL, 
                            fig.labs = c('Category TP', 'Precision'),
-                           save.figure = FALSE, outfile.name = 'test_category_PR', outfile.type = 'pdf'){
+                           save.figure = FALSE, 
+                           outfile.name = 'test_category_PR', outfile.type = 'pdf'){
   
   # Remove complexes (say top complex, top 3, top 5, top 10 etc.) and generate the curve shown on the picture
   coreComplex_members <- strsplit(data_complex$Genes, "[;]") # ';' would work just fine
@@ -746,8 +748,11 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL,
     }
   }
   
+  # Get the xlim for TP plot (maximum among all standard)
+  x.lim <- 1
+  
+  # First get the maximum TP among the standards to fix the x.lim
   for (i in 1 : length(pr.stepwise)) {
-    
     pr_contri = pr.stepwise[[i]]$data
     pr_contri_anno <- pr_contri$Name
     pr_contri <- pr_contri[,-1] # Remove complex Name, and keep the data
@@ -768,29 +773,49 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL,
       x <- cTP_func(data = pr_contri, anno = pr_contri_anno,
                     complexes = coreComplex_members, 
                     tp_th = thresholds[1], percent_th = thresholds[2])
+    } # else
+    
+    print(max(x))
+    
+    if (max(x) > x.lim){
+      x.lim <- max(x)
     }
     
+    # Save the data so that we don't have to run twice!
+    if (i == 1){
+      data_to_out <- list(data = x)
+    } else{
+      data_to_out <- append(data_to_out, list(data = x))
+    }
+    
+  } 
+  x.lim
+
+  # Now do the plotting
+  for (i in 1 : length(pr.stepwise)) {
+    
+    x <- data_to_out[[i]]
     
     if (i == 1){
       plot(x, y, xlab = fig.labs[1], ylab = fig.labs[2], bty = "n", las=1, 
-           ylim = c(0,max(y)), pch = 16, 
+           ylim = c(0,max(y)), xlim = c(1,x.lim),
+           pch = 16, 
            type = "l", log = "x", lwd = 2,
            cex.lab = 1.4, cex.main = 1.4, cex.axis = 1.4,
-           col = ccol[i])
+           col = ccol[i], lty = legend.ltype[i])
       
     }else{
       lines(x, y, col = ccol[i], lwd = 2,)
     }
-    print(max(x))
   }
   
   if(!is.null(legend.names)){
     legend("topright", legend = legend.names, fill = ccol, 
            cex = 1, bty = "n", text.col = "black", horiz = F)
   }
-  
-  if (save.figure){
-    dev.off()
-  }
-  
+
+if (save.figure){
+  dev.off()
+}
+
 }
