@@ -18,37 +18,52 @@
 #' Separate the contribution of signal into individual entries (a complex, pathway, GO Biological Process etc.)
 #' Works on the result of CalculatePredictionAndTrueOnLibraryProfiles
 #'
-#' @param info.pairs -> True, Predicted values with pair association to an entity
+#' @param entity.matrix -> True, Predicted values with pair association to an entity
 #' @param top.numbers -> How much of the signal to consider (from the top)
-#' @param data.entity -> Entity ID and Name information
+#' @param summary.standard -> Identity of each entity ('ID'), 'Name', Genes insdie ('Gene'), 'Length'
+#' @param data.standard -> Co annotation standard
 #'
-#' @return The entities and their contribution to the signal
+#' @return The entities and their contribution to the signal, also the top top.number of TPs
 #' 
-GetContributionOfEntitiesAtCertainTP <- function (info.pairs, top.number, data.entity){
+GetContributionOfEntitiesAtCertainTP <- function (entity.matrix, top.number, summary.standard, data.standard){
 
   # Sort by predicted scores
-  sort.ind = order(info.pairs[,'predicted'], decreasing = TRUE)
-  info.pairs = info.pairs[sort.ind,]
+  sort.ind = order(entity.matrix[,'predicted'], decreasing = TRUE)
+  entity.matrix = entity.matrix[sort.ind,]
 
   # Now find the top TP Pairs from the data
-  count.tp.pairs = cumsum(info.pairs[,'true'])
+  count.tp.pairs = cumsum(entity.matrix[,'true'])
   min.ind = min(which (count.tp.pairs == top.number))
 
-  tmp.data = info.pairs[1:min.ind, ] # Get the data until the point where we get top.number of TP
+  tmp.data = entity.matrix[1:min.ind, ] # Get the data until we hit top.number of TP
   tmp.data = tmp.data[tmp.data[,'true'] == 1, ] # Keep only the TP Pairs (with true = 1)
 
   # Split the source by ';' and get the IDs in lists
-  tmp.names = strsplit(tmp.data[,'source'], ';')
+  tmp.names = strsplit(tmp.data[,'ID'], ';')
   all.IDs = as.integer(unlist(tmp.names))
-  unique.IDs = unique(all.IDs)
-  count.IDs = tabulate(match(all.IDs,  unique.IDs)) # May need to change if data size is big (Not efficient)
-  contribution.entities = data.frame(ID = unique.IDs, count = count.IDs, Name = data.entity[as.character(unique.IDs),2])
+  
+  # unique.IDs = unique(all.IDs)
+  # count.IDs = tabulate(match(all.IDs,  unique.IDs)) # May need to change if data size is big (Not efficient)
+  
+  # Sort and group the IDs (to find how many times an ID occurs)
+  all.IDs <- sort(all.IDs)
+  indices.unique.IDs <- GroupUniqueElements(all.IDs)
+  
+  # Get the complexes and number of pair contribution
+  complex.IDs <- as.integer(row.names(indices.unique.IDs))
+  count.IDs <- indices.unique.IDs[,2] - indices.unique.IDs[,1] + 1
+  row.names(summary.standard) <- summary.standard$ID
+  
+  contribution.entities = data.frame(ID = complex.IDs, top_pairs = count.IDs, Name = summary.standard[row.names(indices.unique.IDs),2])
 
   # Sort by contribution count
-  ind = order(contribution.entities[,"count"], decreasing = TRUE);
-  contribution.entities = contribution.entities[ind,];
+  ind <- order(contribution.entities[,"top_pairs"], decreasing = TRUE)
+  contribution.entities <- contribution.entities[ind,]
   
-  return(contribution.entities)
+  # Get the top pairs themselves
+  top_pairs <- data.standard[tmp.data$index,]
+  
+  return(list(contribution.entities, top_pairs))
 }
 
 
@@ -101,6 +116,8 @@ GetAreaUnderPRCurveForEntities <- function (summary.standard, data.standard, ent
   AUC.values = numeric(length(unique.complex.ID))
   common.complex.ID <- intersect(unique.complex.ID, summary.standard$ID)
   matched.ind <- match(common.complex.ID, summary.standard$ID, nomatch = 0) # identical(summary.standard$ID[matched.ind], common.complex.ID)
+  
+  diff.AUC <- numeric(length(unique.complex.ID)) # background precision / random expectation subtracted
   
   curr.ind <- 1
   
@@ -162,7 +179,9 @@ GetAreaUnderPRCurveForEntities <- function (summary.standard, data.standard, ent
     
     Perf.result = GenerateDataForPerfCurve(data_relevant$predicted, data_relevant$true, x.axis = 'recall', y.axis = 'precision')
     
-    AUC.values[curr.ind] = Perf.result$auc # Should be either zero or positive (check)
+    AUC.values[curr.ind] <- Perf.result$auc # Should be either zero or positive (check)
+    diff.AUC[curr.ind] <- AUC.values[curr.ind] - Perf.result$y[length(Perf.result$y)] # differential AUPRC 
+    
     setTxtProgressBar(pb, curr.ind/length(matched.ind)) # Progress bar update
     
     curr.ind <- curr.ind + 1
@@ -171,7 +190,7 @@ GetAreaUnderPRCurveForEntities <- function (summary.standard, data.standard, ent
   close(pb)
   
   # sort the data by their AUPRC values (highest to lowest)
-  data.out <- data.frame(ID = summary.standard[matched.ind,]$ID, Name = summary.standard[matched.ind,]$Name, Length = summary.standard[matched.ind,]$Length, AUPRC = round(AUC.values,3), stringsAsFactors = FALSE)
+  data.out <- data.frame(ID = summary.standard[matched.ind,]$ID, Name = summary.standard[matched.ind,]$Name, Length = summary.standard[matched.ind,]$Length, AUPRC = round(AUC.values,3), diff.AUPRC = diff.AUC, stringsAsFactors = FALSE)
   ind <- order (data.out$AUPRC, decreasing = TRUE) # why is ind$ix not giving the same data of ind$x!!
   data.out <- data.out[ind,]
   
