@@ -6,12 +6,17 @@
 \usage{
 PlotContributionStructure(
   plot.data,
-  cutoff.all,
+  cutoff.all = NULL,
   min.pairs = 10,
   min.precision.cutoff = 0.5,
+  num.complex.to.show = 10,
+  show.legend = TRUE,
+  list.of.complexes.to.show = NULL,
+  alternative.names = NULL,
   ccol = NULL,
-  fig.labs = c("Fraction of TP", "Precision"),
+  y.lim = NULL,
   fig.title = NULL,
+  fig.labs = c("Fraction of TP", "Precision"),
   outfile.name = "test_cont_str",
   outfile.type = "pdf",
   save.figure = FALSE
@@ -26,11 +31,19 @@ PlotContributionStructure(
 
 \item{min.precision.cutoff}{How far down should we go in precision cutoff to calcualte contribution of complexes? Default is 0.5, meaning we calculate contributions starting from the highest precision (where we have at least min.pairs) to the min.precision.cutoff and take a mean contribution to rank the complexes.}
 
+\item{num.complex.to.show}{How many complexes we want to show (everything else will be put to others)?}
+
+\item{show.legend}{default TRUE. Set to FALSE if we don't want to print legends.}
+
+\item{list.of.complexes.to.show}{Use this list of complex to show on the plot, regardless of their ranking.}
+
+\item{alternative.names}{Provide a list of names (corresponds to list.of.complexes.to.show) to use as alternative to original names}
+
 \item{ccol}{colors for the top complexes highlighted (top 10 contributing complexes are colored by default)}
 
-\item{fig.labs}{x and y axis labels}
-
 \item{fig.title}{title in case we want to save the image}
+
+\item{fig.labs}{x and y axis labels}
 
 \item{outfile.name}{name of the output file}
 

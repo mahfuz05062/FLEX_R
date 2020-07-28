@@ -2,7 +2,7 @@
 % Please edit documentation in R/PostProcessing.R
 \name{getSubsetOfCoAnnRemoveIDs}
 \alias{getSubsetOfCoAnnRemoveIDs}
-\title{Remove a complex (or complexes) to re-evaluate the data}
+\title{Remove a complex (or complexes) to re-evaluate the data. This removes all the positive pairs associated with them complex (thereby effectively removing the complex).}
 \usage{
 getSubsetOfCoAnnRemoveIDs(data.standard, ids, replace = FALSE)
 }
@@ -17,5 +17,5 @@ Way2 (replace = true): Convert the positive pairs to negatives.
 This will maintain the size (number of pairs) of the data.}
 }
 \description{
-Remove a complex (or complexes) to re-evaluate the data
+Remove a complex (or complexes) to re-evaluate the data. This removes all the positive pairs associated with them complex (thereby effectively removing the complex).
 }

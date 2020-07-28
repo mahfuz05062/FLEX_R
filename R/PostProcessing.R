@@ -21,9 +21,11 @@
 #' @param entity.matrix -> True, Predicted values with pair association to an entity
 #' @param top.numbers -> How much of the signal to consider (from the top)
 #' @param summary.standard -> Identity of each entity ('ID'), 'Name', Genes insdie ('Gene'), 'Length'
-#' @param data.standard -> Co annotation standard
+#' @param data.standard -> Co annotation standard (gene1, gene2, 1/0, source)
 #'
 #' @return The entities and their contribution to the signal, also the top top.number of TPs
+#' 
+#' @export
 #' 
 GetContributionOfEntitiesAtCertainTP <- function (entity.matrix, top.number, summary.standard, data.standard){
 
@@ -127,7 +129,7 @@ GetAreaUnderPRCurveForEntities <- function (summary.standard, data.standard, ent
   # data_subset$source[stri_detect(data_subset$source, fixed = to.match)]
   
   pb <- txtProgressBar(style = 3) # Progress bar
-  for (i in matched.ind){
+  for (i in matched.ind){ # 2742 complexes
     # print(i)
     gene_list = unlist(strsplit(toupper(summary.standard$Genes[i]), ';'))
     gene_list = gsub(' ', '', gene_list) # Replacing any spaces with nothing
@@ -190,9 +192,12 @@ GetAreaUnderPRCurveForEntities <- function (summary.standard, data.standard, ent
   close(pb)
   
   # sort the data by their AUPRC values (highest to lowest)
-  data.out <- data.frame(ID = summary.standard[matched.ind,]$ID, Name = summary.standard[matched.ind,]$Name, Length = summary.standard[matched.ind,]$Length, AUPRC = round(AUC.values,3), diff.AUPRC = diff.AUC, stringsAsFactors = FALSE)
+  data.out <- data.frame(ID = summary.standard[matched.ind,]$ID, Name = summary.standard[matched.ind,]$Name, Length = summary.standard[matched.ind,]$Length, AUPRC = round(AUC.values,4), diff.AUPRC = diff.AUC, stringsAsFactors = FALSE)
   ind <- order (data.out$AUPRC, decreasing = TRUE) # why is ind$ix not giving the same data of ind$x!!
   data.out <- data.out[ind,]
+  
+  # Remove NAs
+  data.out <- data.out[!is.na(data.out$AUPRC),]
   
   return (data.out)
 }
@@ -206,7 +211,6 @@ GetAreaUnderPRCurveForEntities <- function (summary.standard, data.standard, ent
 #'
 #' @return output.complex.contribution -> Complex by precision matrix (where entries are number of TP contributed by the complex at that precision)
 #' This is a entity ID * cutoff data.frame (with an extra column added for entity Name)
-#' @export
 #'  
 GetContributionOfEntitiesAtPrecisions <- function (Pairs.in.data, list.of.precisions, summary.standard){
   

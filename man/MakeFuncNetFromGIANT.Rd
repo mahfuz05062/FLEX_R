@@ -18,3 +18,8 @@ a data frame for co-annotations of gene pairs
 \description{
 Download the GIANT functional network and process it to use for FLEX
 }
+\examples{
+file_loc <- '/project/chadm/Mahfuz/CRISPR/2_HAP1/GIN_Analysis/GIN_Paper_Analysis/3_Standard_functional_evaluation/1_PR_Analysis/Data/global_standard.txt'
+	data.ca <- MakeFuncNetFromGIANT(file_loc)
+
+}

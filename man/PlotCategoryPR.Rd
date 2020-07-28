@@ -9,7 +9,9 @@ PlotCategoryPR(
   pr.stepwise,
   thresholds = NULL,
   legend.names = NULL,
+  legend.ltype = NULL,
   ccol = NULL,
+  fig.labs = c("Category TP", "Precision"),
   save.figure = FALSE,
   outfile.name = "test_category_PR",
   outfile.type = "pdf"

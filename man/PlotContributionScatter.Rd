@@ -11,6 +11,7 @@ PlotContributionScatter(
   fig.title = NULL,
   fig.labs = c("AUPRC", "Size"),
   show.text = FALSE,
+  show.cutoffs = FALSE,
   save.figure = FALSE,
   outfile.type = "pdf",
   outfile.name = "test_scatter"
@@ -24,6 +25,8 @@ PlotContributionScatter(
 \item{fig.labs}{labels for x and y axis}
 
 \item{show.text}{set TRUE to show the names of plotted complexes}
+
+\item{show.cutoffs}{set TRUE to show the AUPRC and size cutoff chosen}
 
 \item{outfile.type}{type of figure to save - 'pdf' (default) or 'png'}
 

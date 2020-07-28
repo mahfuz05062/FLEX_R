@@ -2,7 +2,7 @@
 % Please edit documentation in R/PostProcessing.R
 \name{GetStepwiseContributionOfEntities}
 \alias{GetStepwiseContributionOfEntities}
-\title{Separate the contribution of signal into individual entries (a complex, pathway, GO Biological Process etc.)}
+\title{Concentrate the signal (TPs) into the minimum number of complexes that can explain the signal + get the contribution of the complexes at different precisions.}
 \usage{
 GetStepwiseContributionOfEntities(Pairs.in.data, cutoff.all, summary.standard)
 }
@@ -18,5 +18,5 @@ output.stepwise.contribution -> Stepwise contribution matrix
 This is a entity ID * cutoff data.frame (with an extra column added for entity Name)
 }
 \description{
-Separate the contribution of signal into individual entries (a complex, pathway, GO Biological Process etc.)
+Concentrate the signal (TPs) into the minimum number of complexes that can explain the signal + get the contribution of the complexes at different precisions.
 }

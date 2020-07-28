@@ -9,14 +9,18 @@ PlotPRSimilarity(
   subsample = FALSE,
   neg.to.pos = FALSE,
   type.plot = "log",
-  fig.title = NULL,
-  fig.labs = c("TP", "Precision"),
+  is.bgdline = FALSE,
+  provided.xlim = NULL,
+  provided.ylim = NULL,
   legend.names = NULL,
   legend.color = c("blue"),
+  legend.ltype = NULL,
+  box.type = "L",
+  fig.title = NULL,
+  fig.labs = c("TP", "Precision"),
   save.figure = FALSE,
   outfile.name = "test_PR_sim",
-  outfile.type = "pdf",
-  is.bgdline = FALSE
+  outfile.type = "pdf"
 )
 }
 \arguments{
@@ -28,21 +32,21 @@ PlotPRSimilarity(
 
 \item{type.plot}{can be either 'log' - semilog (x axis) or 'normal' plot}
 
-\item{fig.title}{title of the figure (default nothing)}
-
-\item{fig.labs}{x and y axis labels - default: c('TP', 'Precision')}
+\item{is.bgdline}{set to TRUE if we want to plot a background (reference) line for precision (y-axis). If plotting multiple plots, setting this to false (default) probably makes more sense unless all of those share the same background.}
 
 \item{legend.names}{names of legends}
 
 \item{legend.color}{colors of legends}
+
+\item{fig.title}{title of the figure (default nothing)}
+
+\item{fig.labs}{x and y axis labels - default: c('TP', 'Precision')}
 
 \item{save.figure}{set to TRUE to save the figure in a pdf file (fig.title is used as the name)}
 
 \item{outfile.name}{the name of the output file(figure)}
 
 \item{outfile.type}{type of figure to save - 'pdf' (default) or 'png'}
-
-\item{is.bgdline}{set to TRUE if we want to plot a background (reference) line for precision (y-axis). If plotting multiple plots, setting this to false (default) probably makes more sense unless all of those share the same background.}
 }
 \value{
 

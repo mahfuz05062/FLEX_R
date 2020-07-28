@@ -147,6 +147,100 @@ MakeCoAnnotationFromGeneSymbols <- function(data_standard, overlap_length = 1, s
 
 
 
+#' Create a co-annotation matrix for gene pairs from given gene memberships into entities (complex, pw etc.).
+#' 
+#' @param data_standard the functional standard as a data.frame ($ID, $Name, $Genes as columns)
+#' @param overlap_length Number of common annotations to a complex/pathway to qualify as a co-annoation
+#' @param file_location The location of the file (path + filename) to store the co-annotation data. If NULL is given, we still return the co_annotation data.
+#'
+#' @return a matrix of gene * gene to show if there is a co-annotation (1) or not (0)
+#'  
+#' @examples 
+#'  
+#' @export
+#'  
+MakeCoAnnotationMatrixFromGeneSymbols <- function(data_standard, overlap_length = 1, file_location = NULL){
+  
+  if (!is.null(file_location)){ # If a path for the file is given
+    if (file.exists(file_location)){
+      message('File already exists .. Loading data from file ...')
+      
+      load(file_location)
+      ifelse (grep('data_co_annotation', ls()), return (data_co_annotation), return(NULL))
+      
+    } else{
+      message("File doesn't exist! Will create a new one!!!")
+    }
+  }
+  
+  ## Make a gene to ID (complex/pathway etc.) map -------------------------
+  gene_id_map <- new.env()
+  get_hash <- Vectorize(get, vectorize.args = "x")
+  
+  print('Mapping Genes to the standard (complex for example) IDs ... ')
+  
+  for (i in 1 : length(data_standard$ID)){
+    gene_list = unlist(strsplit(data_standard$Genes[i], split = ';')) # There are genes like c4orf3 where it may make difference
+    gene_list = gsub(' ', '', gene_list) # Replacing any spaces with nothing
+    
+    for (j in 1 : length(gene_list)){
+      key <- gene_list[j]
+      key <- gsub(' ', '', key) # Remove spaces in name (if any)
+      
+      if (key == '') { # If it's an empty character
+        next
+      }
+      
+      # If the key is absent insert, otherwise append (the complex ID)
+      # exists('MAP3K20', envir = gene_id_map) retruns T/F
+      ifelse(is.null(gene_id_map[[key]]), gene_id_map[[key]] <- data_standard$ID[i], 
+             gene_id_map[[key]] <- c(gene_id_map[[key]], data_standard$ID[i]))
+    }
+  }
+  
+  all_genes_in_std <- ls(gene_id_map) # names(gene_id_map) work too, but ls() outputs are sorted alphabetically
+  entity_list_of_genes <- get_hash(all_genes_in_std, gene_id_map) # A list
+  
+  
+  ## Now make the co-annotation matrix -------------------------
+  ca_adj_mat <- matrix(0, nrow = length(all_genes_in_std), ncol = length(all_genes_in_std))
+  row.names(ca_adj_mat) <- all_genes_in_std
+  colnames(ca_adj_mat) <- all_genes_in_std
+  
+  candidate_genes <-all_genes_in_std
+  candidate_IDs <- entity_list_of_genes # A list with candiate_genes as list names
+  n <- length(candidate_genes)
+  
+  print('Generating Co-annotation Gold Standard ... ')
+  pb <- txtProgressBar(style = 3) # Progress bar
+  
+  for (i in 1: (n-1)){
+    for (j in (i+1):n){
+      # candidate_genes[i] # candidate_genes[j]
+      if (length(intersect(candidate_IDs[[i]], candidate_IDs[[j]])) > 0){ 
+        ca_adj_mat[i,j] <- 1
+        ca_adj_mat[j,i] <- 1
+      }
+    }
+    setTxtProgressBar(pb, i/(n-1)) # Progress bar update
+  }
+  close(pb)
+  
+  # If the direcotry itself doesn't exist, we still return the output
+  if (!is.null(file_location)){
+    result = tryCatch(save(data_co_annotation, file = file_location), 
+                      error=function(e) {
+                        message(paste("Directory/File does not to exist / no permission", file_location))
+                        # Choose a return value in case of error
+                        return(ca_adj_mat)
+                      },
+                      finally = {})
+  }
+  
+  return(ca_adj_mat)
+}
+
+
 #' Download the GIANT functional network and process it to use for FLEX
 #'
 #' @param file_location The location save the input GIANT file. If it is not there, it will be downloaded.
