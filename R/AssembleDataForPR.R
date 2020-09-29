@@ -403,11 +403,11 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
 
 
 
-#' Pair up the direct interaction between different pairs and their true co-annotation value
+#' Pair up the direct interaction between different gene pairs and their true co-annotation value
 #'
 #' @param data.standard: the functional standard (Symbol1, Symbol2, 1/0, source (optional))
 #' @param data.interaction: interaction scores (returned from GetInteractionData)
-#'                   or pairwise.correlation on interaction data
+#'
 #' @return 
 #'  A list of :
 #'   data: combined (query) interactions (score) and their corresponding co-annotation (true) (sorted from -ve to +ve)

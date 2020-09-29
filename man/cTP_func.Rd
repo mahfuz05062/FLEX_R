@@ -23,7 +23,9 @@ cTP_func(
 
 \item{tp_th}{Minimum number of TPs for a complex to be considered as covered}
 
-\item{out_TP}{}
+\item{excludeBG}{Remove the background Precision? T/F}
+
+\item{out_TP}{If false, plots recall instead of TP}
 }
 \description{
 Plot Category level PR Curve

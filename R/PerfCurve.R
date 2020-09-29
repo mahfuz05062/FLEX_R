@@ -20,10 +20,10 @@
 #' @param value.predicted Predicted value / Score (profile similarity / direct interaction)
 #' @param value.true Actual value (1/0 co-annotation for example)
 #' @param neg.to.pos assign TRUE to sort from neg to positive (pos -> neg is the default)
-#' @param x-axis what is the x-axis value you want? (TP, FP, TN, FN, precision, specificity, recall/sensitivity)
-#' @param y-axis what is the y-axis value you want? (TP, FP, TN, FN, precision, speificity, recall/sensitivity)
+#' @param x-axis what is the x-axis value you want? (TP, FP, TN, FN, precision, FPR, recall/sensitivity)
+#' @param y-axis what is the y-axis value you want? (TP, FP, TN, FN, precision, FPR, recall/sensitivity)
 #'
-#' @return PR -> (x: recall, y: precision), ROC -> (x: recall, y: specificity/fpr)
+#' @return PR -> (x: recall, y: precision), ROC -> (x: recall, y: fpr or 1 - specificity)
 #' @examples
 #' PerfCurve <- function(value.predicted, value.true, neg.to.pos = FALSE, type = 'PR', x.axis = 'sensitivity', y.axis = 'precision')
 #' @export
@@ -60,15 +60,17 @@ GenerateDataForPerfCurve <- function(value.predicted, value.true, neg.to.pos = F
   
   precision <- TP / (TP + FP) # PPV
   sensitivity <- TP / (TP + FN)  # Recall / TPR
-  specificity <- FP / (FP + TN) # FPR # 
+  FPR <- FP / (FP + TN) # FPR 
   
   # Find which to return for x and y
   switch(x.axis, TP = {x = TP}, FP = {x = FP}, TN = {x = TN}, FN = {x = FN},
-         precision = {x = precision}, specificity = {x = specificity}, 
-         sensitivity = {x = sensitivity}, recall = {x = sensitivity})
+         precision = {x = precision}, 
+         FPR = {x = FPR}, 
+         sensitivity = {x = sensitivity}, recall = {x = sensitivity}, TPR = {x = sensitivity})
   switch(y.axis, TP = {y = TP}, FP = {y = FP}, TN = {y = TN}, FN = {y = FN},
-         precision = {y = precision}, specificity = {y = specificity}, 
-         sensitivity = {y = sensitivity}, recall = {y = sensitivity})
+         precision = {y = precision}, 
+         FPR = {y = FPR}, 
+         sensitivity = {y = sensitivity}, recall = {y = sensitivity}, TPR = {y = sensitivity})
   
   # area under curve: according to trapizoidal approximation (make sense for roc or pr curve only: unit area)
   # https://www.r-bloggers.com/calculating-auc-the-area-under-a-roc-curve/

@@ -19,12 +19,12 @@ GenerateDataForPerfCurve(
 
 \item{neg.to.pos}{assign TRUE to sort from neg to positive (pos -> neg is the default)}
 
-\item{x-axis}{what is the x-axis value you want? (TP, FP, TN, FN, precision, specificity, recall/sensitivity)}
+\item{x-axis}{what is the x-axis value you want? (TP, FP, TN, FN, precision, FPR, recall/sensitivity)}
 
-\item{y-axis}{what is the y-axis value you want? (TP, FP, TN, FN, precision, speificity, recall/sensitivity)}
+\item{y-axis}{what is the y-axis value you want? (TP, FP, TN, FN, precision, FPR, recall/sensitivity)}
 }
 \value{
-PR -> (x: recall, y: precision), ROC -> (x: recall, y: specificity/fpr)
+PR -> (x: recall, y: precision), ROC -> (x: recall, y: fpr or 1 - specificity)
 }
 \description{
 Generate the values for performance curve (Precision and Recall for example) to plot on x and y axis
