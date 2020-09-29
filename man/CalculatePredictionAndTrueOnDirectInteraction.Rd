@@ -2,15 +2,14 @@
 % Please edit documentation in R/AssembleDataForPR.R
 \name{CalculatePredictionAndTrueOnDirectInteraction}
 \alias{CalculatePredictionAndTrueOnDirectInteraction}
-\title{Pair up the direct interaction between different pairs and their true co-annotation value}
+\title{Pair up the direct interaction between different gene pairs and their true co-annotation value}
 \usage{
 CalculatePredictionAndTrueOnDirectInteraction(data.standard, data.interaction)
 }
 \arguments{
 \item{data.standard:}{the functional standard (Symbol1, Symbol2, 1/0, source (optional))}
 
-\item{data.interaction:}{interaction scores (returned from GetInteractionData)
-or pairwise.correlation on interaction data}
+\item{data.interaction:}{interaction scores (returned from GetInteractionData)}
 }
 \value{
 A list of :
@@ -20,5 +19,5 @@ A list of :
   auc.pos: AUC value for the data (pos to neg), sorted according to queries
 }
 \description{
-Pair up the direct interaction between different pairs and their true co-annotation value
+Pair up the direct interaction between different gene pairs and their true co-annotation value
 }

@@ -147,7 +147,10 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
   if(!is.null(provided.xlim)) {plot.xlim <- provided.xlim}
   if(!is.null(provided.ylim)) {plot.ylim <- provided.ylim}
   
-  plot.xlim <- 10 ^ ceiling(log10(plot.xlim))
+  if (type.plot == 'log'){
+    plot.xlim <- 10 ^ ceiling(log10(plot.xlim))  
+  }
+  
   plot.ylim <- round(plot.ylim + 0.01, 2)
   
   ## *** Save to an output file
@@ -374,7 +377,7 @@ PlotContributionScatter <- function(plot.data,
   
   ## *** Check if we have the right columns in plot.data
   corr_columns <- sum(grepl('Name', names(plot.data))) + sum(grepl('Length', names(plot.data))) + sum(grepl('AUPRC', names(plot.data)))
-  if(corr_columns != 3){
+  if(corr_columns < 3){
     stop ("plot.data should contain 'Name', 'Length', and 'AUPRC' values ... ")
   }
   
@@ -667,8 +670,8 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
 #' @param anno Annotation (names) of the complexes in data
 #' @param percent_th Normalized (by number of pairs) contribution for a complex to be considered as covered
 #' @param tp_th Minimum number of TPs for a complex to be considered as covered
-#' @param excludeBG
-#' @param out_TP
+#' @param excludeBG Remove the background Precision? T/F
+#' @param out_TP If false, plots recall instead of TP
 #'
 cTP_func <- function(data, anno, complexes,
                      percent_th = 0.05, tp_th = 1, excludeBG = T, out_TP = T) {
@@ -715,15 +718,12 @@ cTP_func <- function(data, anno, complexes,
 #' @param outfile.name the name of the output file(figure)
 #' @param outfile.type type of figure to save - 'pdf' (default) or 'png'
 #' 
-#' @example
+#' @examples
 #' data('data_complex', package = 'FLEX')
-#' 
 #' pr_full <- read.table(paste0('Stepwise_contribution_Complex_', datasets[i] ,'.txt'), stringsAsFactors=FALSE, sep = "\t", header = T)
 #' pr_removed <- read.table(paste0('Stepwise_contribution_Complex_Removal_', datasets[i] ,'.txt'), stringsAsFactors=FALSE, sep = "\t", header = T)
-#' 
 #' pr.stepwise <- list(full = list(data = pr_full))
 #' pr.stepwise <- append(pr.stepwise, list(removed = list(data = pr_removed)))
-#' 
 #' PlotCategoryPR(data_complex, pr.stepwise, thresholds = c(1, 0.1), ccol = c('#252525', '#bd0026'), fig.labs = c('TP Complexes', 'Precision'))
 #' 
 #' @export

@@ -37,3 +37,12 @@ PlotCategoryPR(
 \description{
 Separate the contribution of signal into individual entries (a complex, pathway, GO Biological Process etc.)
 }
+\examples{
+data('data_complex', package = 'FLEX')
+pr_full <- read.table(paste0('Stepwise_contribution_Complex_', datasets[i] ,'.txt'), stringsAsFactors=FALSE, sep = "\t", header = T)
+pr_removed <- read.table(paste0('Stepwise_contribution_Complex_Removal_', datasets[i] ,'.txt'), stringsAsFactors=FALSE, sep = "\t", header = T)
+pr.stepwise <- list(full = list(data = pr_full))
+pr.stepwise <- append(pr.stepwise, list(removed = list(data = pr_removed)))
+PlotCategoryPR(data_complex, pr.stepwise, thresholds = c(1, 0.1), ccol = c('#252525', '#bd0026'), fig.labs = c('TP Complexes', 'Precision'))
+
+}

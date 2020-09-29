@@ -212,6 +212,7 @@ pr.stepwise <- append(pr.stepwise, list(third = list(data = pr_contri_noAUChi, c
 PlotCategoryPR(data_complex, pr.stepwise, thresholds = c(1, 0.3), ccol = c('#252525', '#fb6a4a', '#74c476'), legend.names = c('Full', 'ETC removed', 'high AUC, low size removed'))
 
 
+
 ## Following analysis are for testing the package
 if (FALSE){
   ## =========================== ##
