@@ -6,5 +6,5 @@ FLEX_R is compatiable with R version >= 3.4.3 and doesn't have any dependency ex
 
 FLEX can be installed directly from github using install_github('csbio/FLEX_R') and this requires the 'devtools' package.
 
-## Qestions and Comments
+## Questions and Comments
 Please email to rahma118@umn.edu or mahfuz05062@gmail.com if you have any questions, comments, potential bugs or suggestions!
