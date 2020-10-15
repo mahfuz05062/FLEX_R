@@ -123,7 +123,7 @@ ReformatDepMapData <- function(filename, delim = ','){
   # data.interaction.final <- t(as.numeric(as.character(data[2:dim(data)[1], 2:dim(data)[2]])))
   
   # Way 2: Read the data again (it will be numeric only now)
-  data.interaction <- read.table(filename, header = T, sep = ',', stringsAsFactors = F, row.names = 1)
+  data.interaction <- read.table(filename, header = T, sep = delim, stringsAsFactors = F, row.names = 1)
   data.interaction.final <- t(data.interaction)
   row.names(data.interaction.final) <- genes
   

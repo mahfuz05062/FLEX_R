@@ -21,14 +21,18 @@
 #' @param subsample Subsamples from the PR space to reduce the size of the plotted data. 
 #' @param neg.to.pos assign TRUE to sort from neg to positive (pos -> neg is the default)
 #' @param type.plot can be either 'log' - semilog (x axis) or 'normal' plot
-#' @param fig.title title of the figure (default nothing)
+#' @param is.bgdline set to TRUE if we want to plot a background (reference) line for precision (y-axis). If plotting multiple plots, setting this to false (default) probably makes more sense unless all of those share the same background.
+#' @param provided.xlim A vector with minimum and maximum x-axis limits (usually calculated from the data)
+#' @param provided.ylim A vector with minimum and maximum y-axis limits (usually calculated from the data)
 #' @param fig.labs x and y axis labels - default: c('TP', 'Precision')
-#' @param legend.names names of legends
-#' @param legend.color colors of legends
+#' @param legend.names names of legends (vector of characters)
+#' @param legend.color colors of legends (vector of colors)
+#' @param legend.ltype type of line
+#' @param box.type default is 'L'
+#' @param fig.title title of the figure (default nothing)
 #' @param save.figure set to TRUE to save the figure in a pdf file (fig.title is used as the name)
 #' @param outfile.name the name of the output file(figure)
 #' @param outfile.type type of figure to save - 'pdf' (default) or 'png'
-#' @param is.bgdline set to TRUE if we want to plot a background (reference) line for precision (y-axis). If plotting multiple plots, setting this to false (default) probably makes more sense unless all of those share the same background.
 #'
 #' @return
 #' 
