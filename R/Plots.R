@@ -360,6 +360,8 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
 #' Plot a scatter plot of contribution of all complexes
 #'
 #' @param plot.data a list or a data.frame with columns 'Name', 'Length', and 'AUPRC'
+#' @param length.cutoff The complex/pw/etc. length to separate into groups (y-axis)
+#' @param AUPRC.cutoff The AUPRC.cutoff to separate into groups (x-axis)
 #' @param fig.title title of the figure
 #' @param fig.labs labels for x and y axis
 #' @param show.text set TRUE to show the names of plotted complexes
@@ -458,12 +460,13 @@ PlotContributionScatter <- function(plot.data,
 #' @param plot.data a complex (unique) vs precision matrix where each element denote number of TP at that combination
 #' @param cutoff.all all the precision cutoffs used here (the same as used for plot.data) 
 #' @param min.pairs all the precision cutoffs used here (the same as used for plot.data) 
+#' @param min.precision.cutoff How far down should we go in precision cutoff to calcualte contribution of complexes? Default is 0.5, meaning we calculate contributions starting from the highest precision (where we have at least min.pairs) to the min.precision.cutoff and take a mean contribution to rank the complexes.
 #' @param num.complex.to.show How many complexes we want to show (everything else will be put to others)?
 #' @param list.of.complexes.to.show Use this list of complex to show on the plot, regardless of their ranking.
 #' @param alternative.names Provide a list of names (corresponds to list.of.complexes.to.show) to use as alternative to original names
-#' @param min.precision.cutoff How far down should we go in precision cutoff to calcualte contribution of complexes? Default is 0.5, meaning we calculate contributions starting from the highest precision (where we have at least min.pairs) to the min.precision.cutoff and take a mean contribution to rank the complexes.
 #' @param ccol colors for the top complexes highlighted (top 10 contributing complexes are colored by default)
 #' @param show.legend default TRUE. Set to FALSE if we don't want to print legends.
+#' @param y.lim The limit for y-axis to use (automatically calcualted if not provided)
 #' @param fig.title title in case we want to save the image
 #' @param fig.labs x and y axis labels
 #' @param save.figure do we want to save or just plot
@@ -477,13 +480,14 @@ PlotContributionScatter <- function(plot.data,
 
 PlotContributionStructure <- function(plot.data, cutoff.all = NULL, 
                                       min.pairs = 10, min.precision.cutoff = 0.5, 
-                                      num.complex.to.show = 10, show.legend = TRUE,
+                                      num.complex.to.show = 10, 
                                       list.of.complexes.to.show = NULL, 
                                       alternative.names = NULL,
-                                      ccol = NULL, y.lim = NULL, fig.title = NULL, 
+                                      ccol = NULL, show.legend = TRUE,
+                                      y.lim = NULL, fig.title = NULL, 
                                       fig.labs = c('Fraction of TP', 'Precision'), 
-                                      outfile.name = 'test_cont_str', outfile.type = 'pdf',
-                                      save.figure = FALSE) {
+                                      save.figure = FALSE,
+                                      outfile.name = 'test_cont_str', outfile.type = 'pdf') {
   
   ## *** Check if we have the right format for plot.data
   if (class(plot.data) == 'data.frame'){
@@ -672,6 +676,7 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
 #'
 #' @param data Stepwise Contribution (numeric) for each complexes
 #' @param anno Annotation (names) of the complexes in data
+#' @param complexes Complex/PW/BP and their gene members (as a list)
 #' @param percent_th Normalized (by number of pairs) contribution for a complex to be considered as covered
 #' @param tp_th Minimum number of TPs for a complex to be considered as covered
 #' @param excludeBG Remove the background Precision? T/F
@@ -697,7 +702,8 @@ cTP_func <- function(data, anno, complexes,
   }
   
   # Applying a TP cutoff and a percent of complex contribution cutoff
-  x <- c(apply(data >= tp_th & x > percent_th, 2, sum), 1)
+  x <- c(apply(data >= tp_th & x > percent_th, 2, sum), 1) # Appending 1!
+  # x <- c(apply(data >= tp_th & x > percent_th, 2, sum))
   
   if(out_TP == FALSE) {
     x <- x / max(x) #recall
@@ -715,9 +721,11 @@ cTP_func <- function(data, anno, complexes,
 #'
 #' @param data_complex Original input for the co-annotation standard
 #' @param pr.stepwise Stepwise Contribution (TP) per complex at different precisions
-#' @param legend.names legends for different curves
-#' @param ccol colors for each of the PR curves
 #' @param thresholds a vector of two thresholds to filter complexes (1) No of TP, (2) Percent of TP pairs captured.
+#' @param legend.names legends for different curves
+#' @param legend.ltype Line types for each line (default = 1)
+#' @param ccol colors for each of the PR curves (Must provide)
+#' @param fig.labs labels for x and y axis
 #' @param save.figure set to TRUE to save the figure (fig.title is used as the name)
 #' @param outfile.name the name of the output file(figure)
 #' @param outfile.type type of figure to save - 'pdf' (default) or 'png'
@@ -733,11 +741,15 @@ cTP_func <- function(data, anno, complexes,
 #' @export
 #' 
 PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL, 
-                           legend.names = NULL, legend.ltype = NULL, 
+                           legend.names = NULL, legend.ltype = 1, 
                            ccol = NULL, 
-                           fig.labs = c('Category TP', 'Precision'),
+                           fig.labs = c('TP (Module)', 'Precision'),
                            save.figure = FALSE, 
                            outfile.name = 'test_category_PR', outfile.type = 'pdf'){
+  
+  if(is.null(ccol)){
+    warning('No Color Provided inside ccol for PlotCategoryPR!!!')
+  }
   
   # Remove complexes (say top complex, top 3, top 5, top 10 etc.) and generate the curve shown on the picture
   coreComplex_members <- strsplit(data_complex$Genes, "[;]") # ';' would work just fine
@@ -768,11 +780,11 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL,
     tmp <- names(pr_contri)
     y <- as.numeric(substr(tmp, 11, max(sapply(tmp, nchar))))
     y <- y[-1] # no background is shown
-    y <- c(y,1) # A 1 is added! Why!
+    y <- c(y,1) # A 1 is added! Need this if we use x <- c(apply(data >= tp_th & x > percent_th, 2, sum), 1) in cTP_func
     
     if (is.null(thresholds)){
       x <- cTP_func(data = pr_contri, anno = pr_contri_anno,
-                    complexes = coreComplex_members, percent_th = .3)
+                    complexes = coreComplex_members, percent_th = .1)
     } else{
       x <- cTP_func(data = pr_contri, anno = pr_contri_anno,
                     complexes = coreComplex_members, 
@@ -793,12 +805,16 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL,
     }
     
   } 
-  x.lim
+  # x.lim
 
   # Now do the plotting
   for (i in 1 : length(pr.stepwise)) {
     
     x <- data_to_out[[i]]
+    
+    tmp <- names(x)
+    y <- as.numeric(substr(tmp, 11, max(sapply(tmp, nchar))))
+    y[length(y)] <- 1
     
     if (i == 1){
       plot(x, y, xlab = fig.labs[1], ylab = fig.labs[2], bty = "n", las=1, 

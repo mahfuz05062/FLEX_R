@@ -407,6 +407,7 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
 #'
 #' @param data.standard: the functional standard (Symbol1, Symbol2, 1/0, source (optional))
 #' @param data.interaction: interaction scores (returned from GetInteractionData)
+#' @param provide.identity: if TRUE, return gene pairs for each interaction (library and query)
 #'
 #' @return 
 #'  A list of :
@@ -416,29 +417,9 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
 #'   auc.pos: AUC value for the data (pos to neg), sorted according to queries
 #' @export
 #' 
-CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.interaction){
+CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.interaction, provide.identity = FALSE){
   
-  ## Subset the data using unique query genes (if not already provided) 
-  queries <- unlist(lapply(strsplit(colnames(data.interaction), '_'), '[[', 1) ) # Get the first element of the list (strings separated by '_')
-  queries_unique <- unique(queries)
-  
-  # If there are multiple replicates, we are taking the first unique one  
-  indices <- match(queries_unique, queries)
-  data.interaction <- data.interaction[,indices]
-  queries <- queries[indices]
-  queries.original <- colnames(data.interaction)
-  colnames(data.interaction) <- queries # queries.original[indices]
-  queries.full <- queries.original[indices] # Complete names of the query
-  
-  ## PR Curve for each query screen (using numeric interaction data)
-  combined.true.neg <- c()
-  combined.score.neg <- c()
-  GI_ones <- numeric(length(queries)) # Number of interactions for a gene
-  AUC.neg.summary <- c()
-  AUC.pos.summary <- c()
-  Queries.with.AUC <- c()
-  
-  
+  ## 1. Sort and group data from standard
   # Get the indices of unique genes (sorted by the first gene of the pair)
   if (is.unsorted(data.standard$gene1)){
     ind <- order(data.standard$gene1)
@@ -458,13 +439,40 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   indices.genes2 <- out 
   unique.genes2 <- row.names(out)
   
-  curr.ind <- 0
   
-  ## For all queries
+  ## 2. Subset the data using unique query genes (if not already provided) 
+  queries <- unlist(lapply(strsplit(colnames(data.interaction), '_'), '[[', 1) ) # Get the first element of the list (strings separated by '_')
+  queries_unique <- unique(queries)
+  
+  # If there are multiple replicates, we are taking the first unique one  
+  indices <- match(queries_unique, queries)
+  data.interaction <- data.interaction[,indices]
+  queries <- queries[indices]
+  queries.original <- colnames(data.interaction)
+  colnames(data.interaction) <- queries # queries.original[indices]
+  queries.full <- queries.original[indices] # Complete names of the query
+  
+  ## 3. PR Curve for each query screen (using numeric interaction data)
+  combined.true.neg <- c()
+  combined.score.neg <- c()
+  
+  if(provide.identity == TRUE){
+    combined.library.gene <- c()
+    combined.query.gene <- c()
+  }
+  
+  GI_ones <- c() # Number of interactions for a query
+  AUC.neg.summary <- c()
+  AUC.pos.summary <- c()
+  Queries.with.AUC <- c()
+  
+  ## 4. Generate the Score vs Annotation data (all queries)
+  curr.ind <- 0
   pb <- txtProgressBar(style = 3) # Progress bar
   for (query.cand in queries){
     # query.cand = 'MUS81' # Complex testing
     # query.cand = 'ABCC1' # Pathway testing
+    # query.cand = 'AKT1'
     
     curr.ind <- curr.ind + 1
     
@@ -513,8 +521,14 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
       tmp.true.neg <- tmp.true.neg[ind.ascending]
       
       # Save globally for combined query analysis later
-      combined.true.neg  = c(combined.true.neg, tmp.true.neg)
-      combined.score.neg = c(combined.score.neg, tmp.score.neg)
+      combined.true.neg  <- c(combined.true.neg, tmp.true.neg)
+      combined.score.neg <- c(combined.score.neg, tmp.score.neg)
+      
+      if(provide.identity == TRUE){
+        # Store gene names
+        combined.library.gene <- c(combined.library.gene, names(tmp.true.neg))
+        combined.query.gene <- c(combined.query.gene, rep(query.cand, length(tmp.true.neg)))
+      }
       
       # AUC (neg to pos): ascend = TRUE
       output.neg <- GenerateDataForPerfCurve(value.predicted = tmp.score.neg, value.true = tmp.true.neg, 
@@ -549,7 +563,17 @@ CalculatePredictionAndTrueOnDirectInteraction <- function(data.standard, data.in
   tmpInd = order(combined.score.neg)
   combined.score.neg <- combined.score.neg[tmpInd]
   combined.true.neg <- combined.true.neg[tmpInd]
-  combined.neg = data.frame(True = combined.true.neg, Score = combined.score.neg)
+  
+  if(provide.identity == TRUE){
+    # Store gene names
+    combined.library.gene <- combined.library.gene[tmpInd]
+    combined.query.gene <- combined.query.gene[tmpInd]
+    combined.neg = data.frame(True = combined.true.neg, Score = combined.score.neg, 
+                              library = combined.library.gene, query = combined.query.gene)
+  } else{
+    # Don't store gene names
+    combined.neg = data.frame(True = combined.true.neg, Score = combined.score.neg)
+  }
   
   ## Sort by Query Names
   ind <- order(Queries.with.AUC)
