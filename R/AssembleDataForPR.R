@@ -97,13 +97,15 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     
     print('calculating pairwise correlation ...')
     
-    # Check if there are a lot of NaNs in data?
-    percent.nan <- sum(is.nan(as.matrix(data.interaction))) / (dim(data.interaction)[1] * dim(data.interaction)[2])
+    # Check if there are a lot of NaNs in data? Total percentage, or percent of NaN columns
+    percent.nan <- sum(is.nan(as.matrix(data.interaction))) / (dim(data.interaction)[1] * dim(data.interaction)[2]) + sum(is.na(as.matrix(data.interaction))) / (dim(data.interaction)[1] * dim(data.interaction)[2])
+    percent.nan.cols <- (sum(is.nan(apply(data_scores, sum, MARGIN = 2))) + sum(is.na(apply(data_scores, sum, MARGIN = 2)))) / dim(data.interaction)[2]
     
-    if (percent.nan > 0.1){ # If we have more than 20% NaNs in the data
+    if ( (percent.nan > 0.1) | (percent.nan.cols > 0.1) ){ # If we have more than 20% NaNs in the data
       data.interaction <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson') # Slow, and really unstable (for sparse data)
       
       ## *** TODO: Use inner product
+      ## *** TODO: Impute nan/NA's? (median)
     }else{
       data.interaction <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson') # Fast
     }
