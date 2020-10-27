@@ -523,7 +523,7 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
   Precision_ind <- (tmp_TP >= min.pairs) # Using 10 TP as the default parameter
   cont_stepwise_mat <- cont_stepwise_mat[,Precision_ind]
   
-  # TODO: automatically get this from the data (plot.data)
+  ## Automatically get the cutoffs from input data (if not provided externally)
   if (is.null(cutoff.all)){
     tmp <- names(cont_stepwise_mat)
     y <- as.numeric(substr(tmp, 11, max(sapply(tmp, nchar))))
@@ -548,8 +548,8 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
   # ** Ranking: Use mean contributions from all precisions >= min.precision.cutoff (default 0.5) to rank the complexes
   ind.for.mean <- which(y >= min.precision.cutoff) # x and cutoff.all
   
+  # If we don't have precision over 0.5, or very few of them, use the mid precision
   if (length(ind.for.mean) < 3){
-    # If we don't have precision over 0.5, or very few of them, use the mid precision
     ind.for.mean <- which(y >= ((max(y)-min(y)) / 2) )
   }
   

@@ -99,11 +99,11 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     
     # Check if there are a lot of NaNs in data? Total percentage, or percent of NaN columns
     percent.nan <- sum(is.nan(as.matrix(data.interaction))) / (dim(data.interaction)[1] * dim(data.interaction)[2]) + sum(is.na(as.matrix(data.interaction))) / (dim(data.interaction)[1] * dim(data.interaction)[2])
-    percent.nan.cols <- (sum(is.nan(apply(data_scores, sum, MARGIN = 2))) + sum(is.na(apply(data_scores, sum, MARGIN = 2)))) / dim(data.interaction)[2]
+    percent.nan.cols <- (sum(is.nan(apply(data.interaction, sum, MARGIN = 2))) + sum(is.na(apply(data.interaction, sum, MARGIN = 2)))) / dim(data.interaction)[2]
     
     if ( (percent.nan > 0.1) | (percent.nan.cols > 0.1) ){ # If we have more than 20% NaNs in the data
       data.interaction <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson') # Slow, and really unstable (for sparse data)
-      
+      ## *** TODO: Remove genes with very few non-NA values left? apply(is.na(data.interaction), sum, MARGIN = 1)
       ## *** TODO: Use inner product
       ## *** TODO: Impute nan/NA's? (median)
     }else{
