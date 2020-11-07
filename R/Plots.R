@@ -511,17 +511,18 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
     }
   }
   
-  # Remove duplicated data if not already done
+  ## ============ Pre-processing ============
+  ## Remove duplicated data if not already done
   plot.data <- plot.data[!duplicated(plot.data$Name), ]
   
   ## *** Separate the Names and the TP numbers per precision
   cont_stepwise_anno <- plot.data$Name # Save the complex names (1824 * 1)
-  cont_stepwise_mat <- plot.data[,-1] # 1824 * 38
+  cont_stepwise_mat <- plot.data[, -1, drop = FALSE] # 1824 * 38
   
   ## *** Remove precisions with less than min.pairs (10) pairs 
   tmp_TP <- apply(cont_stepwise_mat, 2, sum) # Summing the number of pairs at each cutoff
   Precision_ind <- (tmp_TP >= min.pairs) # Using 10 TP as the default parameter
-  cont_stepwise_mat <- cont_stepwise_mat[,Precision_ind]
+  cont_stepwise_mat <- cont_stepwise_mat[, Precision_ind, drop=FALSE]
   
   ## Automatically get the cutoffs from input data (if not provided externally)
   if (is.null(cutoff.all)){
@@ -544,17 +545,31 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
   row.names(x) <- cont_stepwise_anno
   
   
+  
+  ## ============ Calculate ranking of complexes to include in plot ============
+  ## *** Ranking: Use mean contributions from all precisions >= min.precision.cutoff (default 0.5) to rank the complexes
   ## *** Arrange the data from smallest to largest contribution and 
-  # ** Ranking: Use mean contributions from all precisions >= min.precision.cutoff (default 0.5) to rank the complexes
   ind.for.mean <- which(y >= min.precision.cutoff) # x and cutoff.all
   
-  # If we don't have precision over 0.5, or very few of them, use the mid precision
-  if (length(ind.for.mean) < 3){
-    ind.for.mean <- which(y >= ((max(y)-min(y)) / 2) )
+  if (length(ind.for.mean) == 0){
+    stop("No values above 'min.precision.cutoff'")
   }
   
-  tmp.x <- x[,-1] # Not considering the background
-  ind.for.mean <- ind.for.mean - 1 # Adjusting the indices  
+  if (length(ind.for.mean) == 1){
+    stop("Only 1 Precision cutoff above 'min.precision.cutoff'. Structure plot needs at least 2!")
+  }
+  
+  # If we have very few precision over min.precision.cutoff, we use the mid precision
+  # TODO: We may want to exclude this? Take everything above min.precision.cutoff!
+  # if (length(ind.for.mean) < 3){
+  #   ind.for.mean <- which(y >= ((max(y)-min(y)) / 2) )
+  #}
+  
+  tmp.x <- x
+  
+  ## Old. Was not using background in ranking. Kind of redundant as we can set a min.precision.cutoff now!
+  # tmp.x <- x[,-1] # Not considering the background
+  # ind.for.mean <- ind.for.mean - 1 # Adjusting the indices  
   
   # Old ways: 1 (Rank by uniform representation of contribution (approximately) - Not used)
   # tmp.x <- x[,-1] # Not considering the background
@@ -570,26 +585,28 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
   
   # ** Take the bottom (largest contributions) num.complex.to.show (default 10)
   if (is.null(list.of.complexes.to.show)){
-    a <- order(apply(tmp.x[,ind.for.mean], 1, mean))
+    a <- order(apply(tmp.x[,ind.for.mean, drop = FALSE], 1, mean))
     lx <- a[(length(a) - (num.complex.to.show - 1) ) : length(a)] 
-    x <- x[lx, ]
+    x <- x[lx, , drop = FALSE]
+    
   } else{ # If a list of complex is provided, use that!
-    x <- x[list.of.complexes.to.show, ]
+    x <- x[list.of.complexes.to.show, , drop = FALSE]
+    
     if (!is.null(alternative.names)){ # Replace names with alternatives (if provided)
       row.names(x) <- alternative.names
     }
     
-    x <- x[seq(dim(x)[1],1),] # Need to revert
-    ccol <- ccol[seq(length(ccol),1)]
+    x <- x[seq(dim(x)[1],1), , drop = FALSE] # Need to revert
+    if(!is.null(ccol)) ccol <- ccol[seq(length(ccol),1)]
     
-    # If there is NA
+    # If complex name not found: NA
     non.na.ind <- !is.na(x[,1])
-    x <- x[non.na.ind,] # If there is NA due to complex name not found!
-    ccol <- ccol[non.na.ind]
+    x <- x[non.na.ind, , drop = FALSE] # If there is NA due to complex name not found!
+    if(!is.null(ccol)) ccol <- ccol[non.na.ind]
   }
   
-  ## *** Settle colors for top 10 complexes. If 10 colors are not provided, 
-  #  we use a red to blue scale
+  ## *** Settle colors for top list.of.complexes.to.show (default 10) complexes. If colors are not provided, 
+  #      use a red to blue color scale
   #  https://www.datanovia.com/en/blog/top-r-color-palettes-to-know-for-great-data-visualization/
   #  
   if (is.null(ccol)){
@@ -602,7 +619,7 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
     }
   }
   
-  ## *** Add small (rest of the) complexes
+  ## *** Add rest of the complexes to show as 'others' in the plot
   xb <- x
   xb <- rbind(1 - apply(xb, 2, sum), xb) # Contribution of other complexes not in xb (14 * 37 now)
   row.names(xb)[1] <- "others"
@@ -619,11 +636,11 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
     } else if(i == 2) {
       x1[i,] <- x[1,]
     } else {
-      x1[i,] <- apply(x[1:(i - 1),], 2, sum) # Cumulative but doesn't include the last element; will be equal to the penultimate column of x2
+      x1[i,] <- apply(x[1:(i - 1), , drop = FALSE], 2, sum) # Cumulative but doesn't include the last element; will be equal to the penultimate column of x2
     }
     
     if(i > 1) {
-      x2[i,] <- apply(x[1:i,], 2, sum) # Cumulatively add complex contribution at each precision (the last value will be 1)
+      x2[i,] <- apply(x[1:i, , drop = FALSE], 2, sum) # Cumulatively add complex contribution at each precision (the last value will be 1)
     }
   }
   
