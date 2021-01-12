@@ -40,7 +40,7 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     stop ("Check the inputs again ... they are supposed to be data.frame's")
   }
   
-  if (is.null(row.names(data.interaction[1,]))){
+  if (is.null(row.names(data.interaction[1,,drop=FALSE]))){
     stop ("data.interaction does not contain gene names as row names ...")
   }
   

@@ -23,7 +23,7 @@
 #' @param x-axis what is the x-axis value you want? (TP, FP, TN, FN, precision, FPR, recall/sensitivity)
 #' @param y-axis what is the y-axis value you want? (TP, FP, TN, FN, precision, FPR, recall/sensitivity)
 #'
-#' @return PR -> (x: recall, y: precision), ROC -> (x: recall, y: fpr or 1 - specificity)
+#' @return PR -> (x: recall, y: precision), ROC -> (x: FPR or 1 - specificity, and y: recall/TPR)
 #' @examples
 #' PerfCurve <- function(value.predicted, value.true, neg.to.pos = FALSE, type = 'PR', x.axis = 'sensitivity', y.axis = 'precision')
 #' @export
@@ -48,7 +48,8 @@ GenerateDataForPerfCurve <- function(value.predicted, value.true, neg.to.pos = F
   FN <- num.real.true - TP
   TN <- length(value.true) - (TP + FP + FN)
   
-  # ** Get the indices of unique predicted values (last occurrence)
+  # *** Get the indices of unique predicted values (last occurrence)
+  # For cases when we have the same prediction for many elements
   unique.index <- which(!duplicated(value.predicted)) # Gives index of first occurrence
   unique.index <- c(unique.index - 1, length(TP)) # Now, it's the last occurrence.
   unique.index <- unique.index[-1] # The first element is 0 anyway!
@@ -61,6 +62,8 @@ GenerateDataForPerfCurve <- function(value.predicted, value.true, neg.to.pos = F
   precision <- TP / (TP + FP) # PPV
   sensitivity <- TP / (TP + FN)  # Recall / TPR
   FPR <- FP / (FP + TN) # FPR 
+  
+  ## *** TODO: What about the cases when we have very few unique precision and/or sensitivity values?
   
   # Find which to return for x and y
   switch(x.axis, TP = {x = TP}, FP = {x = FP}, TN = {x = TN}, FN = {x = FN},

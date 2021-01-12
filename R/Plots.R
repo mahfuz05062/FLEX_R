@@ -345,9 +345,9 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
   lines(data.x.axis, data.y.axis, col=colors.direct[2], lwd = 2) 
   
   
-  legend("topright", legend = c('Positive', 'Negative'), fill = colors.direct, 
-         cex = 1, bty = "n", # remove box
-         text.col = "black", horiz = F)
+  #legend("topright", legend = c('Positive', 'Negative'), fill = colors.direct, 
+  #       cex = 1, bty = "n", # remove box
+  #       text.col = "black", horiz = F)
   
   # When all the plotting is done (Need to work on this)
   if (save.figure == TRUE){
