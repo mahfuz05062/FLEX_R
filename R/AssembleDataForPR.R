@@ -316,9 +316,9 @@ FromGenePairSimilarity <- function(data.standard, data.interaction){
     curr.unique.gene <- unique.names.genes.sim[i]
     
     ## *** The last row doesn't matter, as we have already covered the gene.
-    if (i == length.corr){
-      next # This basically means break in this case!
-    }
+    # if (i == length.corr){
+    #  next # This basically means break in this case!
+    #}
     
     ## Get co-annotation values for all pairs of curr.unique.gene
     ind.pairs.in.std <- gene.indices.std[curr.unique.gene,1] : gene.indices.std[curr.unique.gene,2]
