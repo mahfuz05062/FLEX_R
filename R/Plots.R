@@ -647,33 +647,52 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
   # Save the figure
   if (save.figure){
     if(outfile.type == 'png'){
-      png(paste0(outfile.name, ".png"), width = 4, height = 4, units="in", res = 300)
+      png(paste0(outfile.name, ".png"), width = 8, height = 11, units="in", res = 300)
     }else{
-      pdf(file = paste0(outfile.name, ".pdf"), width = 4, height = 4, useDingbats = F)  
+      pdf(file = paste0(outfile.name, ".pdf"), width=8, height=11, useDingbats = F)  
     }
   }
   
   if (show.legend == TRUE){ # If we have to print legends (complex names)
-    # Create a layout
-    nf <- layout(matrix(c(1,2), 2,1), c(5,5), c(3,2), TRUE) #layout.show(nf)
-    par(mar = c(4,4,1,1)) # bottom, left, top, right (order of margin)
-    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, cex.lab = 1.4, cex.axis = 1.4)
+    # Restricting each complex to 55 chars so that it doesn't overflow
+    legend.complex <- unlist(lapply(rev(row.names(x1)), substr, 1, 55)) 
+    
+    # --------------- 1. Using a layout (bottom legend) ---------------
+    # nf <- layout(matrix(c(1,2), 2,1), c(5,5), c(3,2), TRUE) #layout.show(nf)
+    # par(mar = c(5,5,4,2) + 0.1) # bottom, left, top, right (order of margin)
+    # plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, cex.lab = 1.4, cex.axis = 1.4)
+    # 
+    # for(i in 1:dim(x1)[1]) {
+    #   polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
+    # }
+    # 
+    # par(mar = c(1,1,0,1))
+    # 
+    # plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1) # a null plot for legend
+    # legend("center", legend = legend.complex, fill = rev(ccol), cex = 0.6, bty='n')
+    
+    ## --------------- 2. Create a larger outer margin and use xpd = 'NA' ---------------
+    par(oma=c(20,1,1,1)) # all sides have 3 lines of space
+    par(mar=c(7,4,4,2) + 0.1) # 0.1 so that labels don't cut off!
+    
+    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4)
     
     for(i in 1:dim(x1)[1]) {
       polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
     }
     
-    # Restricting each complex to 55 chars so that it doesn't overflow
-    legend.complex <- unlist(lapply(rev(row.names(x1)), substr, 1, 55)) 
+    legend(x = 0, y = -0.3, legend = legend.complex, fill = rev(ccol), cex = 0.8, bty='n', xpd = NA) # xpd = NA doesn't clip the plot
     
-    par(mar = c(1,1,0,1))
-    # Make a null plot for legend
-    plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1) 
-    # Plot the legend (reverse so the best complex comes to the top)
-    legend("center", legend = legend.complex, fill = rev(ccol), cex = 0.6, bty='n')
+    # --------------- 3. Using inset and margin  (right legend) ---------------
+    # Right legend (using par('usr'))
+    # par(mar = c(15, 5, 4, 15), xpd = TRUE)
+    # coord <- par("usr") # c(x1, x2, y1, y2)
+    # legend(x = coord[2] * 1, y = coord[4] * 0.75, legend = legend.complex, fill = rev(ccol), cex = 0.6, bty='n', horiz = F) # Plot the legend (reverse so the best complex comes to the top)
     
-  } else{ # Just show the contribution plot (without any names)
-    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, cex.lab = 1.4, cex.axis = 1.4)
+    
+  } else{ # Only the contribution plot (without any names)
+    par(mar = c(5,5,4,2))
+    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4)
     
     for(i in 1:dim(x1)[1]) {
       polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
