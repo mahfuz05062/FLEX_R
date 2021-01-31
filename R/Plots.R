@@ -190,7 +190,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
              bty = box.type, # 'n' -> no box, nothing - all boxes
              xlab = fig.labs[1], ylab = fig.labs[2], 
              lwd = 2, col = legend.color[i], lty = legend.ltype[i],
-             cex.lab = 1.2, cex.main = 1.4, cex.axis = 1.4,
+             cex.lab = 1.4, cex.main = 1.4, cex.axis = 1.4,
              font.main = 1, xaxt="n") # Not plotting x axis tick labels
         
         # Adding customized xtick labels
@@ -208,7 +208,7 @@ PlotPRSimilarity <- function(pred.ca, subsample = FALSE,
              bty = box.type, # 'n' -> no box, nothing - all boxes
              xlab = fig.labs[1], ylab = fig.labs[2], font.main = 1,
              lwd = 2, col = legend.color[i], lty = legend.ltype[i],
-             cex.lab = 1.2, cex.main = 1.2, cex.axis = 1.4)
+             cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4)
       }
     }
     else{ # For every other time
@@ -321,7 +321,7 @@ PlotPRDirect <- function(plot.data, type.plot = 'log',
          xlim = c(10, plot.xlim), ylim = c(0, plot.ylim), 
          log = 'x', type = 'l', bty = 'L', main = fig.title, font.main = 1,
          xlab = fig.labs[1], ylab = fig.labs[2], lwd = 2, 
-         cex.lab = 1.2, cex.main = 1.2, cex.axis = 1.2,
+         cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.2,
          col = colors.direct[1], xaxt='n') 
     axis(1, at=10^(x.axis.ticks), 
          labels=as.expression(lapply(x.axis.ticks, function(E) bquote(10^.(E)))),
@@ -661,7 +661,7 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
     # --------------- 1. Using a layout (bottom legend) ---------------
     # nf <- layout(matrix(c(1,2), 2,1), c(5,5), c(3,2), TRUE) #layout.show(nf)
     # par(mar = c(5,5,4,2) + 0.1) # bottom, left, top, right (order of margin)
-    # plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, cex.lab = 1.2, cex.axis = 1.4)
+    # plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, cex.lab = 1.4, cex.axis = 1.4)
     # 
     # for(i in 1:dim(x1)[1]) {
     #   polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
@@ -676,7 +676,7 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
     par(oma=c(20,1,1,1)) # all sides have 3 lines of space
     par(mar=c(7,4,4,2) + 0.1) # 0.1 so that labels don't cut off!
     
-    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, font.main = 1, cex.lab = 1.2, cex.main = 1.2, cex.axis = 1.4)
+    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, font.main = 1, cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4)
     
     for(i in 1:dim(x1)[1]) {
       polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
@@ -692,8 +692,8 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
     
     
   } else{ # Only the contribution plot (without any names)
-    par(mar = c(5,5,4,2)+0.1)
-    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, font.main = 1, cex.lab = 1.2, cex.main = 1.2, cex.axis = 1.4)
+    # par(mar = c(5,5,4,2)+0.1)
+    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, font.main = 1, cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4)
     
     for(i in 1:dim(x1)[1]) {
       polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
@@ -704,7 +704,7 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
     dev.off()
   }
   
-  return (rev(row.names(x1)))
+  return (list(legend = rev(row.names(x1)), color = rev(ccol)))
 }
 
 
@@ -858,7 +858,7 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL,
            ylim = c(0,max(y)), xlim = c(1,x.lim),
            pch = 16, 
            type = "l", log = "x", lwd = 2,
-           cex.lab = 1.2, cex.main = 1.4, cex.axis = 1.4,
+           cex.lab = 1.4, cex.main = 1.4, cex.axis = 1.4,
            col = ccol[i], lty = legend.ltype[i])
       
     }else{
