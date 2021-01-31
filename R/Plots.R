@@ -762,6 +762,8 @@ cTP_func <- function(data, anno, complexes,
 #' @param legend.names legends for different curves
 #' @param legend.ltype Line types for each line (default = 1)
 #' @param ccol colors for each of the PR curves (Must provide)
+#' @param type.plot can be either 'log' - semilog (x axis) or 'normal' plot
+#' @param box.type default is 'n' (other options 'L')
 #' @param fig.labs labels for x and y axis
 #' @param save.figure set to TRUE to save the figure (fig.title is used as the name)
 #' @param outfile.name the name of the output file(figure)
@@ -779,7 +781,7 @@ cTP_func <- function(data, anno, complexes,
 #' 
 PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL, 
                            legend.names = NULL, legend.ltype = 1, 
-                           ccol = NULL, 
+                           ccol = NULL, type.plot = 'log', box.type = 'n',
                            fig.labs = c('TP (Module)', 'Precision'),
                            save.figure = FALSE, 
                            outfile.name = 'test_category_PR', outfile.type = 'pdf'){
@@ -854,12 +856,21 @@ PlotCategoryPR <- function(data_complex, pr.stepwise, thresholds = NULL,
     y[length(y)] <- 1
     
     if (i == 1){
-      plot(x, y, xlab = fig.labs[1], ylab = fig.labs[2], bty = "n", las=1, 
-           ylim = c(0,max(y)), xlim = c(1,x.lim),
-           pch = 16, 
-           type = "l", log = "x", lwd = 2,
-           cex.lab = 1.4, cex.main = 1.4, cex.axis = 1.4,
-           col = ccol[i], lty = legend.ltype[i])
+      if (type.plot == 'log'){
+        plot(x, y, xlab = fig.labs[1], ylab = fig.labs[2], bty = box.type, las=1, 
+             ylim = c(0,max(y)), xlim = c(1,x.lim),
+             pch = 16, 
+             type = "l", log = "x", lwd = 2,
+             cex.lab = 1.4, cex.main = 1.4, cex.axis = 1.4,
+             col = ccol[i], lty = legend.ltype[i])  
+      } else{
+        plot(x, y, xlab = fig.labs[1], ylab = fig.labs[2], bty = box.type, las=1, 
+             ylim = c(0,max(y)), xlim = c(1,x.lim),
+             pch = 16, 
+             type = "l", lwd = 2,
+             cex.lab = 1.4, cex.main = 1.4, cex.axis = 1.4,
+             col = ccol[i], lty = legend.ltype[i])
+      }
       
     }else{
       lines(x, y, col = ccol[i], lwd = 2,)
