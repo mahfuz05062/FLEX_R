@@ -512,6 +512,13 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
     }
   }
   
+  # Check if we have provided colors, we did it for all complexes (default 10)
+  if (!is.null(ccol)){
+    if (length(ccol) != num.complex.to.show){
+      stop("Number of color provided doesn't match number of complexes to show !!!")
+    }
+  }
+  
   ## ============ Pre-processing ============
   ## Remove duplicated data if not already done
   plot.data <- plot.data[!duplicated(plot.data$Name), ]
@@ -597,7 +604,7 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
       row.names(x) <- alternative.names
     }
     
-    x <- x[seq(dim(x)[1],1), , drop = FALSE] # Need to revert
+    x <- x[seq(dim(x)[1],1), , drop = FALSE] # Need to revert (why?)
     if(!is.null(ccol)) ccol <- ccol[seq(length(ccol),1)]
     
     # If complex name not found: NA
