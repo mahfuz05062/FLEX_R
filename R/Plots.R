@@ -1,5 +1,5 @@
 ## Generate different plots for visualization
-## Copyright (C) 2018-2020 AHM Mahfuzur Rahman (rahma118@umn.edu)
+## Copyright (C) 2018-2021 AHM Mahfuzur Rahman (rahma118@umn.edu)
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -666,30 +666,30 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
     legend.complex <- unlist(lapply(rev(row.names(x1)), substr, 1, 55)) 
     
     # --------------- 1. Using a layout (bottom legend) ---------------
-    # nf <- layout(matrix(c(1,2), 2,1), c(5,5), c(3,2), TRUE) #layout.show(nf)
-    # par(mar = c(5,5,4,2) + 0.1) # bottom, left, top, right (order of margin)
-    # plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, cex.lab = 1.4, cex.axis = 1.4)
+    nf <- layout(matrix(c(1,2), 2,1), c(5,5), c(3,2), TRUE) #layout.show(nf)
+    par(mar = c(5,5,4,2) + 0.1) # bottom, left, top, right (order of margin)
+    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, font.main = 1, cex.lab = 1.2, cex.axis = 1.2)
+    
+    for(i in 1:dim(x1)[1]) {
+      polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
+    }
+
+    par(mar = c(1,1,0,1))
+
+    plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1) # a null plot for legend
+    legend("center", legend = legend.complex, fill = rev(ccol), cex = 0.8, bty='n')
+    
+    ## --------------- 2. Create a larger outer margin and use xpd = 'NA' ---------------
+    # par(oma=c(20,1,1,1)) # all sides have 3 lines of space
+    # par(mar=c(7,4,4,2) + 0.1) # 0.1 so that labels don't cut off!
+    # 
+    # plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, font.main = 1, cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4)
     # 
     # for(i in 1:dim(x1)[1]) {
     #   polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
     # }
     # 
-    # par(mar = c(1,1,0,1))
-    # 
-    # plot(NULL ,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1) # a null plot for legend
-    # legend("center", legend = legend.complex, fill = rev(ccol), cex = 0.6, bty='n')
-    
-    ## --------------- 2. Create a larger outer margin and use xpd = 'NA' ---------------
-    par(oma=c(20,1,1,1)) # all sides have 3 lines of space
-    par(mar=c(7,4,4,2) + 0.1) # 0.1 so that labels don't cut off!
-    
-    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, font.main = 1, cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4)
-    
-    for(i in 1:dim(x1)[1]) {
-      polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
-    }
-    
-    legend(x = 0, y = -0.3, legend = legend.complex, fill = rev(ccol), cex = 0.8, bty='n', xpd = NA) # xpd = NA doesn't clip the plot
+    # legend(x = 0, y = -0.3, legend = legend.complex, fill = rev(ccol), cex = 0.8, bty='n', xpd = NA) # xpd = NA doesn't clip the plot
     
     # --------------- 3. Using inset and margin  (right legend) ---------------
     # Right legend (using par('usr'))
@@ -700,7 +700,7 @@ PlotContributionStructure <- function(plot.data, cutoff.all = NULL,
     
   } else{ # Only the contribution plot (without any names)
     # par(mar = c(5,5,4,2)+0.1)
-    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, font.main = 1, cex.lab = 1.4, cex.main = 1.2, cex.axis = 1.4)
+    plot(as.double(x1[1,]), y, type = "l", xlim = c(0,1), ylim = y.lim, col = "white", bty = "n", las = 1, xlab = fig.labs[1], ylab = fig.labs[2], main = fig.title, font.main = 1, cex.lab = 1, cex.main = 1, cex.axis = 1)
     
     for(i in 1:dim(x1)[1]) {
       polygon(c(x1[i,], rev(x2[i,])), c(y, rev(y)), col = ccol[i], border = "white")
@@ -745,17 +745,19 @@ cTP_func <- function(data, anno, complexes,
     x[i,] <- data[i,] / choose(length(complexes[[anno[[i]]]]), 2) 
   }
   
-  # Applying a TP cutoff and a percent of complex contribution cutoff
-  x <- c(apply(data >= tp_th & x > percent_th, 2, sum), 1) # Appending 1!
+  # Applying a TP cutoff and a percent of complex contribution cutoff (and sum up number of complexes at each precision)
+  x <- c(apply(data >= tp_th & x > percent_th, 2, sum), 1) # Appending 1 (so the plot will start from 1 on the x-axis)
   # x <- c(apply(data >= tp_th & x > percent_th, 2, sum))
   
   if(out_TP == FALSE) {
-    x <- x / max(x) #recall
+    x <- x / max(x) # recall (fractional)
   }
   
   if(excludeBG) {
     x <- x[-which(x == max(x))]
   }
+  
+  ## TODO: Keep the background, but remove the appended 1 (background is actually serving the purpose of this!)
   
   return (x)
 }
