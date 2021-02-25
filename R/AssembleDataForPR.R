@@ -102,10 +102,23 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     percent.nan.cols <- (sum(is.nan(apply(data.interaction, sum, MARGIN = 2))) + sum(is.na(apply(data.interaction, sum, MARGIN = 2)))) / dim(data.interaction)[2]
     
     if ( (percent.nan > 0.1) | (percent.nan.cols > 0.1) ){ # If we have more than 20% NaNs in the data
-      data.interaction <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson') # Slow, and really unstable (for sparse data)
-      ## *** TODO: Remove genes with very few non-NA values left? apply(is.na(data.interaction), sum, MARGIN = 1)
-      ## *** TODO: Use inner product
-      ## *** TODO: Impute nan/NA's? (median)
+      # data.interaction <- cor(t(data.interaction), use = 'pairwise.complete.obs', method = 'pearson') # Slow, and really unstable (for sparse data)
+      
+      ## Impute nan/NA values
+      # Way 1: using a random value based on background (May be more variable)
+      # int_mean <- mean(as.vector(as.matrix(data.interaction)), na.rm = T) # mean is very close to 0 anyway!
+      # int_sd <- sd(as.vector(as.matrix(data.interaction)), na.rm = T)
+      # num_na <- sum(is.na(as.matrix(data.interaction)))
+      # if(num_na > 0)
+      #  data.interaction[is.na(as.matrix(data.interaction))] <- rnorm(num_na, mean = 0, sd = int_sd)
+      
+      # Way 2: Use a mean/median per gene score?
+      k <- which(is.na(data.interaction), arr.ind=TRUE)
+      data.interaction[k] <- rowMeans(data.interaction, na.rm=TRUE)[k[,1]]
+      
+      # Now calcualte correlation: no NA in the set
+      data.interaction <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson')
+      
     }else{
       data.interaction <- cor(t(data.interaction), use = 'complete.obs', method = 'pearson') # Fast
     }
