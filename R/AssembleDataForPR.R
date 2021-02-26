@@ -35,11 +35,18 @@
 CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.interaction){
   
   ## *** Check input data format
+  # ------------- 1. data.standard -------------
   true_classes_count <- ((class(data.standard) == 'data.frame') | (class(data.standard) == 'list')) + (class(data.interaction) == 'data.frame' | class(data.interaction) == 'matrix')
   if(true_classes_count < 2){
     stop ("Check the inputs again ... they are supposed to be data.frame's")
   }
   
+  true_column_type <- ((class(data.standard[,1]) == 'character') + (class(data.standard[,2]) == 'character') + (class(data.standard[,3]) == 'integer'))
+  if(true_column_type < 3){
+    stop ("Check the column types. They should be 'character', 'character', 'integer'. Fourth column is optional ...")
+  }
+  
+  # ------------- 2. data.interaction -------------
   if (is.null(row.names(data.interaction[1,,drop=FALSE]))){
     stop ("data.interaction does not contain gene names as row names ...")
   }
