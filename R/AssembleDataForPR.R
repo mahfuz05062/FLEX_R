@@ -41,7 +41,7 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
     stop ("Check the inputs again ... they are supposed to be data.frame's")
   }
   
-  true_column_type <- ((class(data.standard[,1]) == 'character') + (class(data.standard[,2]) == 'character') + (class(data.standard[,3]) == 'integer'))
+  true_column_type <- ((class(data.standard[,1]) == 'character') + (class(data.standard[,2]) == 'character') + ((class(data.standard[,3]) == 'integer') | (class(data.standard[,3]) == 'numeric')))
   if(true_column_type < 3){
     stop ("Check the column types. They should be 'character', 'character', 'integer'. Fourth column is optional ...")
   }
