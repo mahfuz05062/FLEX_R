@@ -35,6 +35,7 @@
 CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.interaction){
   
   ## *** Check input data format
+  
   # ------------- 1. data.standard -------------
   true_classes_count <- ((class(data.standard) == 'data.frame') | (class(data.standard) == 'list')) + (class(data.interaction) == 'data.frame' | class(data.interaction) == 'matrix')
   if(true_classes_count < 2){
@@ -47,6 +48,13 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
   }
   
   # ------------- 2. data.interaction -------------
+  # Format: rownames are genes and the actual values are numbers
+  
+  # Check if all columns are numeric
+  if(!sum(unlist(lapply(data.interaction, is.numeric))) == dim(data.interaction)[2]){
+    stop ("data.interaction contains non-numeric columns (values)")
+  }
+  
   if (is.null(row.names(data.interaction[1,,drop=FALSE]))){
     stop ("data.interaction does not contain gene names as row names ...")
   }
