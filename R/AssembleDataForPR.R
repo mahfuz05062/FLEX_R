@@ -131,6 +131,7 @@ CalculatePredictionAndTrueOnLibraryProfiles <- function(data.standard, data.inte
       #  data.interaction[is.na(as.matrix(data.interaction))] <- rnorm(num_na, mean = 0, sd = int_sd)
       
       # Way 2: Use a mean/median per gene score?
+      print('A lot of NAs. Replacing with gene mean effect ...')
       k <- which(is.na(data.interaction), arr.ind=TRUE)
       data.interaction[k] <- rowMeans(data.interaction, na.rm=TRUE)[k[,1]]
       
