@@ -3,7 +3,7 @@ R package for FLEX (Functional evaluation of experimental perturbations), a pipe
 
 The associated manuscript is published in Moelcular systems biology and is available [here](https://www.embopress.org/doi/full/10.15252/msb.202010013). An overview of the FLEX pipeline is shows below:
 
-![Overview of FLEX as a method](screenshot.png)
+![Overview of FLEX as a method](vignettes/4_FLEX_S1.png)
 
 ## Installation
 FLEX_R is compatiable with R version >= 3.4.3 and doesn't have any dependency except for if someone wish to use the GIANT functional network as a standard ('org.Hs.eg.db' is needed in that case). 
