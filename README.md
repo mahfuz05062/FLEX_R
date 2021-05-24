@@ -1,7 +1,7 @@
 # FLEX_R
 R package for FLEX (Functional evaluation of experimental perturbations), a pipeline that utilizes several functional annotation resources (Complex, Pathway, GO BP) to establish reference standards for systematic evaluation of genome-wide CRISPR screens. FLEX can investigate both single mutant (fitness) or double mutant (genetic interaction) experiments. FLEX summarizes the functional signal captured by these experiments, both globally (gene-pair level) and locally (protein complex level, for example). FLEX highlights the functional information captured by an experiment (and/or scoring method) and also compare and contrast functional information from multiple experiments (or competing scoring schemes).
 
-The associated manuscript is published in Moelcular systems biology and is available [here](https://www.embopress.org/doi/full/10.15252/msb.202010013). An overview of the FLEX pipeline is shows below:
+The associated manuscript is published in Moelcular systems biology and is available [here](https://www.embopress.org/doi/full/10.15252/msb.202010013). An overview of the FLEX pipeline is shown below:
 
 <p align="center">
 <img src="vignettes/4_FLEX_S1.png">
